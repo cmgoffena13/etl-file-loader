@@ -26,3 +26,15 @@ FILE_ERROR_EXCEPTIONS = {
     AuditFailedError,
     GrainValidationError,
 }
+
+
+class DirectoryNotFoundError(Exception):
+    pass
+
+
+class FileCopyError(Exception):
+    pass
+
+
+class FileMoveError(Exception):
+    pass
