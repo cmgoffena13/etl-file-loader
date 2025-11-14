@@ -1,0 +1,64 @@
+import csv
+import gzip
+from pathlib import Path
+from typing import Any, Dict, Iterator
+
+from src.exceptions import MissingHeaderError
+from src.pipeline.read.base import BaseReader
+from src.settings import config
+from src.sources.base import CSVSource
+
+
+class CSVReader(BaseReader):
+    SOURCE_TYPE = CSVSource
+
+    def __init__(
+        self, file_path: Path, source, delimiter: str, encoding: str, skip_rows: int
+    ):
+        super().__init__(file_path, source)
+        self.delimiter = delimiter
+        self.encoding = encoding
+        self.skip_rows = skip_rows
+
+    @property
+    def starting_row_number(self) -> int:
+        """CSV: Row 1 = header, so starting row = 2 + skip_rows."""
+        return 2 + self.skip_rows
+
+    def read(self) -> Iterator[list[Dict[str, Any]]]:
+        file_opener = gzip.open if self.is_gzipped else open
+        file_mode = "rt" if self.is_gzipped else "r"
+
+        with file_opener(
+            self.file_path, file_mode, encoding=self.encoding, newline=""
+        ) as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=self.delimiter)
+
+            if not reader.fieldnames:
+                raise MissingHeaderError(
+                    f"No header found in CSV file: {self.file_path}"
+                )
+
+            if not any(
+                fieldname and fieldname.strip() for fieldname in reader.fieldnames
+            ):
+                raise MissingHeaderError(
+                    f"Whitespace-only header found in CSV file: {self.file_path}"
+                )
+
+            self._validate_fields(set(reader.fieldnames))
+
+            batch = []
+            for index, row in enumerate(reader):
+                if index < self.skip_rows:
+                    continue
+
+                batch.append(row)
+                self.total_rows += 1
+
+                if len(batch) == self.batch_size:
+                    yield batch
+                    batch = []
+
+            if batch:
+                yield batch
