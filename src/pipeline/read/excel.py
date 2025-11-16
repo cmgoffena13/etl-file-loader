@@ -19,8 +19,8 @@ class ExcelReader(BaseReader):
 
     def __init__(self, file_path: Path, source, sheet_name: str, skip_rows: int):
         super().__init__(file_path, source)
-        self.sheet_name = sheet_name
-        self.skip_rows = skip_rows
+        self.sheet_name: str = sheet_name
+        self.skip_rows: int = skip_rows
 
     @property
     def starting_row_number(self) -> int:

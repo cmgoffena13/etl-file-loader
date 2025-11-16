@@ -15,7 +15,7 @@ class JSONReader(BaseReader):
 
     def __init__(self, file_path: Path, source, array_path: str):
         super().__init__(file_path, source)
-        self.array_path = array_path
+        self.array_path: str = array_path
 
     @property
     def starting_row_number(self) -> int:

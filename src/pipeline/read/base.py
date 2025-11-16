@@ -9,15 +9,15 @@ from src.sources.base import DataSource
 
 class BaseReader(ABC):
     def __init__(self, file_path: Path, source: DataSource):
-        self.file_path = file_path
-        self.source = source
+        self.file_path: Path = file_path
+        self.source: DataSource = source
         if not self.file_path.exists():
             raise FileNotFoundError(f"File not found: {self.file_path}")
-        self.is_gzipped = (
+        self.is_gzipped: bool = (
             len(file_path.suffixes) >= 2 and file_path.suffixes[-1].lower() == ".gz"
         )
-        self.batch_size = config.BATCH_SIZE
-        self.total_rows = 0
+        self.batch_size: int = config.BATCH_SIZE
+        self.total_rows: int = 0
 
     def _validate_fields(self, actual_fields: set) -> None:
         actual_file_fields = set(field.lower() for field in actual_fields)

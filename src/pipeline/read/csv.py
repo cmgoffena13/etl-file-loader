@@ -16,9 +16,9 @@ class CSVReader(BaseReader):
         self, file_path: Path, source, delimiter: str, encoding: str, skip_rows: int
     ):
         super().__init__(file_path, source)
-        self.delimiter = delimiter
-        self.encoding = encoding
-        self.skip_rows = skip_rows
+        self.delimiter: str = delimiter
+        self.encoding: str = encoding
+        self.skip_rows: int = skip_rows
 
     @property
     def starting_row_number(self) -> int:

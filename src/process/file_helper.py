@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from queue import Queue
 
 import pendulum
 
@@ -12,18 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class FileHelper:
-    FILES = []
-
     @classmethod
-    def scan_directory(cls, directory_path: Path):
+    def scan_directory(cls, directory_path: Path) -> Queue:
         if not directory_path.exists():
             raise DirectoryNotFoundError(f"Directory not found: {directory_path}")
 
+        file_paths_queue = Queue()
         for entry in os.scandir(directory_path):
             if entry.is_file() and not entry.name.startswith("."):
-                cls.FILES.append(Path(entry.path))
+                file_paths_queue.put(Path(entry.path))
 
-        return cls.FILES
+        return file_paths_queue
 
     @classmethod
     def copy_file_to_archive(cls, file_path: Path):
