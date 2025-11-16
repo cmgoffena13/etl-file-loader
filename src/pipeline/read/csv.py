@@ -54,7 +54,7 @@ class CSVReader(BaseReader):
                     continue
 
                 batch.append(row)
-                self.total_rows += 1
+                self.rows_read += 1
 
                 if len(batch) == self.batch_size:
                     yield batch

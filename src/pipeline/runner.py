@@ -2,20 +2,27 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional
 
+import pendulum
 from opentelemetry import trace
-from sqlalchemy import Engine, MetaData, Table
+from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exceptions import DuplicateFileError
 from src.notify.factory import NotifierFactory
-from src.pipeline.db_utils import db_check_if_duplicate_file, db_create_stage_table
+from src.pipeline.db_utils import (
+    db_check_if_duplicate_file,
+    db_create_stage_table,
+    db_start_log,
+)
 from src.pipeline.read.base import BaseReader
 from src.pipeline.read.factory import ReaderFactory
 from src.pipeline.validate.validator import Validator
 from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.factory import WriterFactory
 from src.process.file_helper import FileHelper
+from src.process.log import FileLoadLog
 from src.sources.base import DataSource
+from src.utils import retry
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -48,13 +55,40 @@ class PipelineRunner:
             file_path, source, self.reader.starting_row_number
         )
         self.result: Optional[tuple[bool, str]] = None
+        self.log = FileLoadLog(
+            source_filename=self.source_filename,
+            started_at=pendulum.now("UTC"),
+        )
+        self.log.id: int = db_start_log(
+            self.Session,
+            self.file_load_log_table,
+            self.log.source_filename,
+            self.log.started_at,
+        )
 
-    def check_if_processed(self) -> None:
-        if db_check_if_duplicate_file(
+    @retry()
+    def _log_update(self, log: FileLoadLog) -> None:
+        vals = log.model_dump(
+            exclude_unset=True, exclude={"id", "source_filename", "started_at"}
+        )
+        stmt = (
+            update(self.file_load_log_table)
+            .where(self.file_load_log_table.c.id == log.id)
+            .values(**vals)
+        )
+        with self.Session() as session:
+            session.execute(stmt)
+
+    def check_if_processed(self) -> bool:
+        already_processed = db_check_if_duplicate_file(
             self.Session, self.data_source, self.source_filename
-        ):
-            logger.warning(f"File {self.source_filename} has already been processed")
+        )
+        if already_processed:
+            logger.warning(
+                f"[log_id: {self.log.id}] File {self.source_filename} has already been processed"
+            )
             FileHelper.copy_file_to_duplicate_files(self.file_path)
+            self.log.duplicate_skipped = True
             if self.reader.source.notification_emails:
                 notifier = NotifierFactory.get_notifier("email")
                 email_notifier = notifier(
@@ -63,20 +97,65 @@ class PipelineRunner:
                     recipient_emails=self.reader.source.notification_emails,
                 )
                 email_notifier.notify()
+            self._log_update(self.log)
+        return already_processed
+
+    def archive_file(self) -> None:
+        self.log.archive_copy_started_at = pendulum.now("UTC")
+        try:
+            FileHelper.copy_file_to_archive(self.file_path)
+            self.log.archive_copy_ended_at = pendulum.now("UTC")
+            self.log.archive_copy_success = True
+        except Exception:
+            self.log.archive_copy_success = False
+            raise
+        finally:
+            self._log_update(self.log)
 
     def read_data(self) -> Iterator[list[Dict[str, Any]]]:
-        yield from self.reader.read()
+        self.log.read_started_at = pendulum.now("UTC")
+        try:
+            yield from self.reader.read()
+            self.log.read_ended_at = pendulum.now("UTC")
+            self.log.records_read = self.reader.rows_read
+            self.log.read_success = True
+        except Exception:
+            self.log.read_success = False
+            raise
+        finally:
+            self._log_update(self.log)
 
     def validate_data(
         self, batches: Iterator[list[Dict[str, Any]]]
     ) -> Iterator[list[Dict[str, Any]]]:
-        yield from self.validator.validate(batches)
+        self.log.validate_started_at = pendulum.now("UTC")
+        try:
+            yield from self.validator.validate(batches)
+            self.log.validate_ended_at = pendulum.now("UTC")
+            self.log.validation_errors = self.validator.validation_errors
+            self.log.validate_success = True
+        except Exception:
+            self.log.validate_success = False
+            raise
+        finally:
+            self._log_update(self.log)
 
     def write_data(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
-        self.stage_table_name = db_create_stage_table(
-            self.engine, self.metadata, self.data_source, self.source_filename
-        )
-        self.writer.write(batches, self.stage_table_name)
+        self.log.write_started_at = pendulum.now("UTC")
+        try:
+            self.stage_table_name = db_create_stage_table(
+                self.engine, self.metadata, self.data_source, self.source_filename
+            )
+            self.writer.write(batches, self.stage_table_name)
+
+            self.log.write_ended_at = pendulum.now("UTC")
+            self.log.records_written_to_stage = self.writer.rows_written_to_stage
+            self.log.write_success = True
+        except Exception:
+            self.log.write_success = False
+            raise
+        finally:
+            self._log_update(self.log)
 
     def audit_data(self):
         pass
@@ -90,11 +169,13 @@ class PipelineRunner:
     def run(self):
         with tracer.start_as_current_span(f"FILE: {self.source_filename}") as span:
             try:
-                self.check_if_processed()
-                self.write_data(self.validate_data(self.read_data()))
-                self.audit_data()
-                self.publish_data()
-                self.cleanup()
+                already_processed = self.check_if_processed()
+                if not already_processed:
+                    self.archive_file()
+                    self.write_data(self.validate_data(self.read_data()))
+                    self.audit_data()
+                    self.publish_data()
+                    self.cleanup()
                 self.result = (True, self.source_filename)
             except Exception as e:
                 logger.exception(

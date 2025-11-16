@@ -65,7 +65,7 @@ class JSONReader(BaseReader):
                 items_to_process = object if isinstance(object, list) else list(object)
                 for item in items_to_process:
                     batch.append(self._flatten_dict(item))
-                    self.total_rows += 1
+                    self.rows_read += 1
 
                     if len(batch) == self.batch_size:
                         yield batch

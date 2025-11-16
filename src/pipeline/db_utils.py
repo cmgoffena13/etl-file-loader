@@ -28,6 +28,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    insert,
     text,
 )
 from sqlalchemy import Date as SQLDate
@@ -35,7 +36,7 @@ from sqlalchemy import DateTime as SQLDateTime
 from sqlalchemy.dialects import mssql
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.process.log import FileLoadLog
 from src.settings import config
@@ -169,7 +170,7 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
 
     columns.extend(
         [
-            Column("etl_row_hash", LargeBinary(32), nullable=False),
+            Column("etl_row_hash", LargeBinary(16), nullable=False),
             Column("source_filename", String(255), nullable=False),
             Column("file_load_log_id", id_column_type, nullable=False),
         ]
@@ -184,11 +185,7 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
 
 
 def db_create_stage_table(
-    engine: Engine,
-    metadata: MetaData,
-    source: DataSource,
-    source_filename: str,
-    log: FileLoadLog,
+    engine: Engine, metadata: MetaData, source: DataSource, source_filename: str
 ) -> str:
     sanitized_name = sanitize_table_name(source_filename)
     stage_table_name = f"stage_{sanitized_name}"
@@ -198,8 +195,6 @@ def db_create_stage_table(
     stage_table = Table(stage_table_name, metadata, *columns)
     metadata.drop_all(engine, tables=[stage_table])
     metadata.create_all(engine, tables=[stage_table])
-    logger.info(f"[log_id={log.id}] Created stage table: {stage_table_name}")
-
     return stage_table_name
 
 
@@ -256,3 +251,24 @@ def db_get_column_names(source: DataSource) -> list[str]:
     columns = [column for column in source.source_model.model_fields.keys()]
     columns.extend(["etl_row_hash", "source_filename", "file_load_log_id"])
     return columns
+
+
+@retry()
+def db_start_log(
+    Session: sessionmaker[Session],
+    file_load_log_table: Table,
+    source_filename: str,
+    started_at: DateTime,
+) -> int:
+    stmt = insert(file_load_log_table).values(
+        source_filename=source_filename, started_at=started_at
+    )
+    with Session() as session:
+        try:
+            res = session.execute(stmt)
+            session.commit()
+            return int(res.inserted_primary_key[0])
+        except Exception as e:
+            logger.exception(f"Error starting log for {source_filename}: {e}")
+            session.rollback()
+            raise e

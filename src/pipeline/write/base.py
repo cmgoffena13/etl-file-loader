@@ -1,9 +1,9 @@
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Dict, Iterator
 
 from sqlalchemy import Table, insert, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.pipeline.db_utils import db_get_column_names
 from src.settings import config
@@ -16,14 +16,15 @@ class BaseWriter(ABC):
     def __init__(
         self,
         source: DataSource,
-        session: Session,
+        Session: sessionmaker[Session],
         file_load_dlq_table: Table,
     ):
         self.source: DataSource = source
-        self.Session: Session = session
+        self.Session: sessionmaker[Session] = Session
         self.columns: list[str] = db_get_column_names(self.source)
         self.batch_size: int = config.BATCH_SIZE
         self.file_load_dlq_table: Table = file_load_dlq_table
+        self.rows_written_to_stage: int = 0
 
     def create_stage_insert_sql(self, stage_table_name: str) -> str:
         placeholders = ", ".join([f":{col}" for col in self.columns])
@@ -31,7 +32,6 @@ class BaseWriter(ABC):
             f"INSERT INTO {stage_table_name} ({', '.join(self.columns)}) VALUES ({placeholders})"
         )
 
-    @abstractmethod
     def write(
         self,
         batches: Iterator[tuple[bool, list[Dict[str, Any]]]],
@@ -51,6 +51,7 @@ class BaseWriter(ABC):
                         try:
                             session.execute(sql_insert_template, valid_records)
                             session.commit()
+                            self.rows_written_to_stage += len(valid_records)
                             valid_records = []
                         except Exception as e:
                             logger.exception(
@@ -66,6 +67,7 @@ class BaseWriter(ABC):
                             )
                             session.execute(stmt)
                             session.commit()
+                            self.rows_written_to_stage += len(invalid_records)
                             invalid_records = []
                         except Exception as e:
                             logger.exception(
@@ -78,6 +80,7 @@ class BaseWriter(ABC):
                     try:
                         session.execute(sql_insert_template, valid_records)
                         session.commit()
+                        self.rows_written_to_stage += len(valid_records)
                     except Exception as e:
                         logger.exception(
                             f"Error inserting records into stage table {stage_table_name}: {e}"
@@ -90,6 +93,7 @@ class BaseWriter(ABC):
                         stmt = insert(self.file_load_dlq_table).values(invalid_records)
                         session.execute(stmt)
                         session.commit()
+                        self.rows_written_to_stage += len(invalid_records)
                     except Exception as e:
                         logger.exception(
                             f"Error inserting records into file load DLQ table: {e}"

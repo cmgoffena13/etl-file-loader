@@ -9,25 +9,35 @@ class FileLoadLog(BaseModel):
     source_filename: str
     started_at: DateTime
     duplicate_skipped: Optional[bool] = None
+    # archive copy phase
     archive_copy_started_at: Optional[DateTime] = None
     archive_copy_ended_at: Optional[DateTime] = None
     archive_copy_success: Optional[bool] = None
-    processing_started_at: Optional[DateTime] = None
-    processing_ended_at: Optional[DateTime] = None
-    processing_success: Optional[bool] = None
-    stage_load_started_at: Optional[DateTime] = None
-    stage_load_ended_at: Optional[DateTime] = None
-    stage_load_success: Optional[bool] = None
+    # reading phase
+    read_started_at: Optional[DateTime] = None
+    read_ended_at: Optional[DateTime] = None
+    read_success: Optional[bool] = None
+    # validating phase
+    validate_started_at: Optional[DateTime] = None
+    validate_ended_at: Optional[DateTime] = None
+    validate_success: Optional[bool] = None
+    # stage load phase
+    write_started_at: Optional[DateTime] = None
+    write_ended_at: Optional[DateTime] = None
+    write_success: Optional[bool] = None
+    # audit phase
     audit_started_at: Optional[DateTime] = None
     audit_ended_at: Optional[DateTime] = None
     audit_success: Optional[bool] = None
-    merge_started_at: Optional[DateTime] = None
-    merge_ended_at: Optional[DateTime] = None
-    merge_success: Optional[bool] = None
+    # merge phase
+    publish_started_at: Optional[DateTime] = None
+    publish_ended_at: Optional[DateTime] = None
+    publish_success: Optional[bool] = None
+    # summary
     ended_at: Optional[DateTime] = None
-    records_processed: Optional[int] = None
+    records_read: Optional[int] = None
     validation_errors: Optional[int] = None
-    records_stage_loaded: Optional[int] = None
+    records_written_to_stage: Optional[int] = None
     target_inserts: Optional[int] = None
     target_updates: Optional[int] = None
     success: Optional[bool] = None

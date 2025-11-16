@@ -17,7 +17,7 @@ class BaseReader(ABC):
             len(file_path.suffixes) >= 2 and file_path.suffixes[-1].lower() == ".gz"
         )
         self.batch_size: int = config.BATCH_SIZE
-        self.total_rows: int = 0
+        self.rows_read: int = 0
 
     def _validate_fields(self, actual_fields: set) -> None:
         actual_file_fields = set(field.lower() for field in actual_fields)

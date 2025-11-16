@@ -10,7 +10,7 @@ from process.file_helper import FileHelper
 from src.notify.factory import NotifierFactory
 from src.notify.slack import AlertLevel
 from src.pipeline.runner import PipelineRunner
-from src.process.db import setup_db
+from src.process.db import create_tables, setup_db
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
@@ -65,6 +65,7 @@ class Processor:
                 break
 
     def process_files_in_parallel(self):
+        create_tables(self.metadata, self.engine)
         try:
             futures = [
                 self.thread_pool.submit(self._worker, self.file_paths_queue)

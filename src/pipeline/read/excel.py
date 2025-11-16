@@ -111,7 +111,7 @@ class ExcelReader(BaseReader):
                 continue
 
             batch.append(self._convert_excel_dates(record, date_field_mapping))
-            self.total_rows += 1
+            self.rows_read += 1
 
             if len(batch) == self.batch_size:
                 yield batch
