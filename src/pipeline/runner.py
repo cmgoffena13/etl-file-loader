@@ -47,13 +47,6 @@ class PipelineRunner:
         self.stage_table_name: Optional[str] = None
         self.file_load_log_table: Table = file_load_log_table
         self.file_load_dlq_table: Table = file_load_dlq_table
-        self.reader: BaseReader = ReaderFactory.create_reader(file_path, source)
-        self.writer: BaseWriter = WriterFactory.create_writer(
-            source, engine, metadata, file_load_dlq_table
-        )
-        self.validator: Validator = Validator(
-            file_path, source, self.reader.starting_row_number
-        )
         self.result: Optional[tuple[bool, str]] = None
         self.log = FileLoadLog(
             source_filename=self.source_filename,
@@ -64,6 +57,13 @@ class PipelineRunner:
             self.file_load_log_table,
             self.log.source_filename,
             self.log.started_at,
+        )
+        self.reader: BaseReader = ReaderFactory.create_reader(file_path, source)
+        self.validator: Validator = Validator(
+            file_path, source, self.reader.starting_row_number, self.log.id
+        )
+        self.writer: BaseWriter = WriterFactory.create_writer(
+            source, engine, metadata, file_load_dlq_table
         )
 
     @retry()
@@ -155,7 +155,10 @@ class PipelineRunner:
                     self.audit_data()
                     self.publish_data()
                     self.cleanup()
+                self.log.ended_at = pendulum.now("UTC")
+                self.log.success = True
                 self.result = (True, self.source_filename, None)
+                self._log_update(self.log)
             except Exception as e:
                 self.log.ended_at = pendulum.now("UTC")
                 self.log.success = None if isinstance(e, DuplicateFileError) else False

@@ -5,7 +5,6 @@ import pendulum
 from pydantic import TypeAdapter, ValidationError
 
 from src.exception.exceptions import ValidationThresholdExceededError
-from src.notify.factory import NotifierFactory
 from src.pipeline.db_utils import db_create_row_hash, db_serialize_json_for_dlq_table
 from src.pipeline.model_utils import (
     create_field_mapping,
@@ -20,7 +19,9 @@ from src.sources.base import DataSource
 
 
 class Validator:
-    def __init__(self, file_path: Path, source: DataSource, starting_row_number: int):
+    def __init__(
+        self, file_path: Path, source: DataSource, starting_row_number: int, log_id: int
+    ):
         self.source: DataSource = source
         self.field_mapping: Dict[str, str] = create_field_mapping(source)
         self.reverse_field_mapping: Dict[str, str] = create_reverse_field_mapping(
@@ -34,6 +35,7 @@ class Validator:
         self.source_filename: str = file_path.name
         self.batch_size: int = config.BATCH_SIZE
         self.sample_validation_errors: List[Dict[str, Any]] = []
+        self.log_id: int = log_id
 
     def _create_dlq_record(
         self,
@@ -107,7 +109,7 @@ class Validator:
                         record, sorted_keys=self.sorted_field_keys
                     )
                     record["source_filename"] = self.source_filename
-                    record["file_load_log_id"] = 0  # TODO: add file load log id
+                    record["file_load_log_id"] = self.log_id
                     batch_results.append(tuple(True, record))
                 self.records_validated += 1
                 if len(batch_results) == self.batch_size:
@@ -119,22 +121,16 @@ class Validator:
         if self.records_validated > 0 and self.validation_errors > 0:
             error_rate = self.validation_errors / self.records_validated
             if error_rate > self.source.validation_error_threshold:
-                if self.source.notification_emails:
-                    truncated_error_rate = round(error_rate, 2)
-                    sample_errors_str = (
-                        "Sample validation failure records:\n"
-                        + "\n".join(
-                            f"Row {err['file_row_number']}: {err['validation_error']} - Record: {err['record']}"
-                            for err in self.sample_validation_errors
-                        )
-                    )
-                    error_values = {
-                        "truncated_error_rate": truncated_error_rate,
-                        "threshold": self.source.validation_error_threshold,
-                        "records_validated": self.records_validated,
-                        "validation_errors": self.validation_errors,
-                        "additional_details": sample_errors_str,
-                    }
-                    exception = ValidationThresholdExceededError()
-                    exception.error_values = error_values
-                    raise exception
+                truncated_error_rate = round(error_rate, 2)
+                sample_errors_str = "Sample validation failure records:\n" + "\n".join(
+                    f"Row {err['file_row_number']}: {err['validation_error']} - Record: {err['record']}"
+                    for err in self.sample_validation_errors
+                )
+                error_values = {
+                    "truncated_error_rate": truncated_error_rate,
+                    "threshold": self.source.validation_error_threshold,
+                    "records_validated": self.records_validated,
+                    "validation_errors": self.validation_errors,
+                    "additional_details": sample_errors_str,
+                }
+                raise ValidationThresholdExceededError(error_values=error_values)
