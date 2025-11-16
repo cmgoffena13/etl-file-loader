@@ -140,3 +140,6 @@ class Validator:
                         additional_details=sample_errors_str,
                     )
                     email_notifier.notify()
+                raise ValidationThresholdExceededError(
+                    "Validation error rate exceeds threshold"
+                )

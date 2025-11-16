@@ -124,14 +124,17 @@ def create_tables(metadata: MetaData, engine: Engine):
         Column("read_started_at", datetime_type, nullable=True),
         Column("read_ended_at", datetime_type, nullable=True),
         Column("read_success", Boolean, nullable=True),
+        Column("records_read", Integer, nullable=True),
         # validating phase
         Column("validate_started_at", datetime_type, nullable=True),
         Column("validate_ended_at", datetime_type, nullable=True),
         Column("validate_success", Boolean, nullable=True),
+        Column("validation_errors", Integer, nullable=True),
         # stage load phase
         Column("write_started_at", datetime_type, nullable=True),
         Column("write_ended_at", datetime_type, nullable=True),
         Column("write_success", Boolean, nullable=True),
+        Column("records_written_to_stage", Integer, nullable=True),
         # audit phase
         Column("audit_started_at", datetime_type, nullable=True),
         Column("audit_ended_at", datetime_type, nullable=True),
@@ -140,13 +143,10 @@ def create_tables(metadata: MetaData, engine: Engine):
         Column("publish_started_at", datetime_type, nullable=True),
         Column("publish_ended_at", datetime_type, nullable=True),
         Column("publish_success", Boolean, nullable=True),
+        Column("publish_inserts", Integer, nullable=True),
+        Column("publish_updates", Integer, nullable=True),
         # summary
         Column("ended_at", datetime_type, nullable=True),
-        Column("records_processed", Integer, nullable=True),
-        Column("validation_errors", Integer, nullable=True),
-        Column("records_stage_loaded", Integer, nullable=True),
-        Column("target_inserts", Integer, nullable=True),
-        Column("target_updates", Integer, nullable=True),
         Column("success", Boolean, nullable=True),
         Column("error_type", String(50), nullable=True),
     )
