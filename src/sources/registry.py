@@ -4,6 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from src.exception.exceptions import MultipleSourcesMatchError
 from src.pipeline.read.factory import ReaderFactory
 from src.sources.base import DataSource
 from src.utils import get_file_extension
@@ -44,6 +45,6 @@ class SourceRegistry(BaseModel):
             return matching_sources[0]
         else:
             source_names = [s.table_name for s in matching_sources]
-            raise ValueError(
+            raise MultipleSourcesMatchError(
                 f"Multiple sources match file '{file_path.name}': {', '.join(source_names)}"
             )

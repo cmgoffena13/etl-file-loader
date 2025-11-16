@@ -5,7 +5,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Optional
 
-from src.exceptions import FILE_ERROR_EXCEPTIONS
+from src.exception.base import BaseFileErrorEmailException
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def retry(attempts: int = 3, delay: float = 0.25, backoff: float = 2.0):
                     return fn(*args, **kwargs)
                 except Exception as e:
                     # Don't retry file-specific validation errors
-                    if type(e) in FILE_ERROR_EXCEPTIONS:
+                    if isinstance(e, BaseFileErrorEmailException):
                         raise e
 
                     if i == attempts - 1:

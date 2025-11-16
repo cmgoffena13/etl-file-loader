@@ -3,6 +3,7 @@ import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Empty, Queue
+from typing import Optional
 
 from sqlalchemy import Engine, MetaData, Table
 
@@ -34,25 +35,18 @@ class Processor:
         self.file_load_dlq_table: Table = Table(
             "file_load_dlq", self.metadata, autoload_with=self.engine
         )
-        self.results: list[tuple[bool, str]] = []
+        self.results: list[tuple[bool, str, Optional[str]]] = []
 
     def process_file(self, file_path: Path):
         try:
             source = MASTER_REGISTRY.find_source_for_file(file_path)
-            if source is not None:
-                runner = PipelineRunner(file_path, source, self.engine, self.metadata)
-                result = runner.run()
-                self.results.append(result)
         except Exception as e:
-            logger.exception(f"Error processing file {file_path.name}: {e}")
-            notifier = NotifierFactory.get_notifier("slack")
-            slack_notifier = notifier(
-                level=AlertLevel.ERROR,
-                title=f"Error processing file {file_path.name}",
-                message=str(e),
-            )
-            slack_notifier.notify()
-            self.results.append((False, file_path.name))
+            logger.exception(f"Error finding source for file {file_path.name}: {e}")
+            self.results.append((False, file_path.name, str(e)))
+        if source is not None:
+            runner = PipelineRunner(file_path, source, self.engine, self.metadata)
+            result = runner.run()
+            self.results.append(result)
 
     def _worker(self, file_paths_queue: Queue):
         while True:
@@ -76,21 +70,27 @@ class Processor:
         finally:
             self.thread_pool.shutdown(wait=True)
 
-    def check_results_for_failures(self):
-        files_failed = []
+    def check_results_for_failures(self) -> dict[str, str]:
+        files_failed = {}
         for result in self.results:
             if not result[0]:
-                files_failed.append(result[1])
+                filename = result[1]
+                error_message = result[2] if result[2] else "Unknown error"
+                files_failed[filename] = error_message
         return files_failed
 
     def results_failure_summary(self):
         files_failed = self.check_results_for_failures()
         if files_failed:
-            message = f"Some files failed to process: {', '.join(files_failed)}"
+            failure_details = "\n".join(
+                f"• {filename}: {error_message}"
+                for filename, error_message in files_failed.items()
+            )
+            message = f"Some files failed to process:\n{failure_details}"
             notifier = NotifierFactory.get_notifier("slack")
             slack_notifier = notifier(
                 level=AlertLevel.ERROR,
-                title=f"File Processing Failure Summary",
+                title="File Processing Failure Summary",
                 message=message,
             )
             slack_notifier.notify()

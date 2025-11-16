@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterator, List
 import pendulum
 from pydantic import TypeAdapter, ValidationError
 
-from src.exceptions import ValidationThresholdExceededError
+from src.exception.exceptions import ValidationThresholdExceededError
 from src.notify.factory import NotifierFactory
 from src.pipeline.db_utils import db_create_row_hash, db_serialize_json_for_dlq_table
 from src.pipeline.model_utils import (
@@ -128,18 +128,13 @@ class Validator:
                             for err in self.sample_validation_errors
                         )
                     )
-                    notifier = NotifierFactory.get_notifier("email")
-                    email_notifier = notifier(
-                        source_filename=self.source_filename,
-                        exception=ValidationThresholdExceededError,
-                        recipient_emails=self.source.notification_emails,
-                        truncated_error_rate=truncated_error_rate,
-                        threshold=self.source.validation_error_threshold,
-                        records_validated=self.records_validated,
-                        validation_errors=self.validation_errors,
-                        additional_details=sample_errors_str,
-                    )
-                    email_notifier.notify()
-                raise ValidationThresholdExceededError(
-                    "Validation error rate exceeds threshold"
-                )
+                    error_values = {
+                        "truncated_error_rate": truncated_error_rate,
+                        "threshold": self.source.validation_error_threshold,
+                        "records_validated": self.records_validated,
+                        "validation_errors": self.validation_errors,
+                        "additional_details": sample_errors_str,
+                    }
+                    exception = ValidationThresholdExceededError()
+                    exception.error_values = error_values
+                    raise exception

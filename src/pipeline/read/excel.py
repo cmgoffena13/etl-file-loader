@@ -5,7 +5,7 @@ import pendulum
 import pyexcel
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 
-from src.exceptions import MissingHeaderError
+from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
 from src.sources.base import ExcelSource
 

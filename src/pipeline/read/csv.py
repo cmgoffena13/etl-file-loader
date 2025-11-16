@@ -3,7 +3,7 @@ import gzip
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
-from src.exceptions import MissingHeaderError
+from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
 from src.settings import config
 from src.sources.base import CSVSource

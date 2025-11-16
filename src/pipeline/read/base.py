@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
-from src.exceptions import MissingColumnsError
+from src.exception.exceptions import MissingColumnsError
 from src.settings import config
 from src.sources.base import DataSource
 

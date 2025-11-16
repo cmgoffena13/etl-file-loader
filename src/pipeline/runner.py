@@ -7,7 +7,7 @@ from opentelemetry import trace
 from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.exceptions import FILE_ERROR_EXCEPTIONS, DuplicateFileError
+from src.exception.exceptions import BaseFileErrorEmailException, DuplicateFileError
 from src.notify.factory import NotifierFactory
 from src.pipeline.db_utils import (
     db_check_if_duplicate_file,
@@ -89,30 +89,23 @@ class PipelineRunner:
             )
             FileHelper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
-            if self.reader.source.notification_emails:
-                notifier = NotifierFactory.get_notifier("email")
-                email_notifier = notifier(
-                    source_filename=self.source_filename,
-                    exception=DuplicateFileError,
-                    recipient_emails=self.reader.source.notification_emails,
-                )
-                email_notifier.notify()
-            self._log_update(self.log)
-            raise DuplicateFileError(
-                f"File {self.source_filename} has already been processed"
-            )
+            raise DuplicateFileError
         return already_processed
 
     def archive_file(self) -> None:
         self.log.archive_copy_started_at = pendulum.now("UTC")
+
         FileHelper.copy_file_to_archive(self.file_path)
+
         self.log.archive_copy_ended_at = pendulum.now("UTC")
         self.log.archive_copy_success = True
         self._log_update(self.log)
 
     def read_data(self) -> Iterator[list[Dict[str, Any]]]:
         self.log.read_started_at = pendulum.now("UTC")
+
         yield from self.reader.read()
+
         self.log.read_ended_at = pendulum.now("UTC")
         self.log.records_read = self.reader.rows_read
         self.log.read_success = True
@@ -122,7 +115,9 @@ class PipelineRunner:
         self, batches: Iterator[list[Dict[str, Any]]]
     ) -> Iterator[list[Dict[str, Any]]]:
         self.log.validate_started_at = pendulum.now("UTC")
+
         yield from self.validator.validate(batches)
+
         self.log.validate_ended_at = pendulum.now("UTC")
         self.log.validation_errors = self.validator.validation_errors
         self.log.validate_success = True
@@ -130,6 +125,7 @@ class PipelineRunner:
 
     def write_data(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
         self.log.write_started_at = pendulum.now("UTC")
+
         self.stage_table_name = db_create_stage_table(
             self.engine, self.metadata, self.data_source, self.source_filename
         )
@@ -149,7 +145,7 @@ class PipelineRunner:
     def cleanup(self) -> None:
         pass
 
-    def run(self):
+    def run(self) -> tuple[bool, str, Optional[str]]:
         with tracer.start_as_current_span(f"FILE: {self.source_filename}") as span:
             try:
                 already_processed = self.check_if_processed()
@@ -159,13 +155,32 @@ class PipelineRunner:
                     self.audit_data()
                     self.publish_data()
                     self.cleanup()
-                self.result = (True, self.source_filename)
-            except Exception in FILE_ERROR_EXCEPTIONS:
-                self.log.error_type = e.error_type
-                self._log_update(self.log)
+                self.result = (True, self.source_filename, None)
             except Exception as e:
-                logger.exception(
-                    f"Error running pipeline for file {self.source_filename}: {e}"
-                )
-                self.result = (False, self.source_filename)
+                self.log.ended_at = pendulum.now("UTC")
+                self.log.success = None if isinstance(e, DuplicateFileError) else False
+                self.log.error_type = type(e).__name__
+                if isinstance(e, BaseFileErrorEmailException):
+                    if self.reader.source.notification_emails:
+                        error_values = getattr(e, "error_values", {})
+                        notifier = NotifierFactory.get_notifier("email")
+                        email_notifier = notifier(
+                            source_filename=self.source_filename,
+                            log_id=self.log.id,
+                            exception=e,
+                            recipient_emails=self.reader.source.notification_emails,
+                            **error_values,
+                        )
+                        email_notifier.notify()
+                    self.result = (
+                        True,
+                        self.source_filename,
+                        None,
+                    )  # Success since email notification was sent
+                else:
+                    logger.exception(
+                        f"Error running pipeline for file {self.source_filename}: {e}"
+                    )
+                    self.result = (False, self.source_filename, str(e))
+                self._log_update(self.log)
             return self.result
