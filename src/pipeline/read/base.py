@@ -30,13 +30,17 @@ class BaseReader(ABC):
         if missing_fields:
             required_fields_display = sorted(required_file_fields)
             missing_fields_display = sorted(missing_fields)
-
-            error_msg = (
-                f"Missing required fields in {self.file_path.suffix.upper()} file {self.file_path.name}\n"
-                f"Required fields: {', '.join(required_fields_display)}\n"
-                f"Missing fields: {', '.join(missing_fields_display)}"
+            raise MissingColumnsError(
+                error_values={
+                    "source_filename": self.file_path.name,
+                    "required_fields_display_formatted": ", ".join(
+                        required_fields_display
+                    ),
+                    "missing_fields_display_formatted": ", ".join(
+                        missing_fields_display
+                    ),
+                }
             )
-            raise MissingColumnsError(error_msg)
 
     @abstractmethod
     def read(self) -> Iterator[Dict[str, Any]]:

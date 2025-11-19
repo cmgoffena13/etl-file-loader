@@ -36,14 +36,14 @@ class CSVReader(BaseReader):
 
             if not reader.fieldnames:
                 raise MissingHeaderError(
-                    f"No header found in CSV file: {self.file_path}"
+                    error_values={"source_filename": self.file_path.name}
                 )
 
             if not any(
                 fieldname and fieldname.strip() for fieldname in reader.fieldnames
             ):
                 raise MissingHeaderError(
-                    f"Whitespace-only header found in CSV file: {self.file_path}"
+                    error_values={"source_filename": self.file_path.name}
                 )
 
             self._validate_fields(set(reader.fieldnames))

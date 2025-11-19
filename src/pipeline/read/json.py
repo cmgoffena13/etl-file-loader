@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterator
 
 import ijson
 
+from src.exception.exceptions import NoDataInFileError
 from src.pipeline.read.base import BaseReader
 from src.sources.base import JSONSource
 
@@ -27,55 +28,6 @@ class JSONReader(BaseReader):
         if isinstance(value, Decimal):
             return float(value)
         return value
-
-    def read(self) -> Iterator[list[Dict[str, Any]]]:
-        """Read JSON file iteratively in batches.
-
-        Note: JSON keys must match the Pydantic model field names or aliases.
-        Flattening preserves JSON key structure (e.g., nested {"Entry": {"ID": 1}}
-        becomes "Entry_ID"), so JSON structure should align with model expectations.
-        """
-        file_opener = gzip.open if self.is_gzipped else open
-
-        with file_opener(self.file_path, "rb") as file:
-            objects = ijson.items(file, self.array_path)
-
-            try:
-                first_obj = next(objects)
-            except StopIteration:
-                raise ValueError(f"No data found in JSON file: {self.file_path}")
-
-            # Validate fields using first object
-            if isinstance(first_obj, list) and first_obj:
-                first_item = first_obj[0]
-            elif isinstance(first_obj, list):
-                raise ValueError(f"Empty list found in JSON file: {self.file_path}")
-            else:
-                first_item = first_obj
-
-            flattened_first = self._flatten_dict(first_item)
-            actual_fields = set(flattened_first.keys())
-            self._validate_fields(actual_fields)
-
-            # Merge first object back into the iterator
-            all_objects = chain([first_obj], objects)
-
-            batch = [None] * self.batch_size
-            batch_index = 0
-            for object in all_objects:
-                items_to_process = object if isinstance(object, list) else list(object)
-                for item in items_to_process:
-                    batch[batch_index] = self._flatten_dict(item)
-                    batch_index += 1
-                    self.rows_read += 1
-
-                    if batch_index == self.batch_size:
-                        yield batch
-                        batch[:] = [None] * self.batch_size
-                        batch_index = 0
-
-            if batch_index > 0:
-                yield batch[:batch_index]
 
     def _flatten_dict(
         self, dictionary: Dict[str, Any], parent_key: str = "", sep: str = "_"
@@ -108,3 +60,56 @@ class JSONReader(BaseReader):
             else:
                 items.append((new_key, self._convert_decimals_to_float(value)))
         return dict(items)
+
+    def read(self) -> Iterator[list[Dict[str, Any]]]:
+        """Read JSON file iteratively in batches.
+
+        Note: JSON keys must match the Pydantic model field names or aliases.
+        Flattening preserves JSON key structure (e.g., nested {"Entry": {"ID": 1}}
+        becomes "Entry_ID"), so JSON structure should align with model expectations.
+        """
+        file_opener = gzip.open if self.is_gzipped else open
+
+        with file_opener(self.file_path, "rb") as file:
+            objects = ijson.items(file, self.array_path)
+
+            try:
+                first_obj = next(objects)
+            except StopIteration:
+                raise NoDataInFileError(
+                    error_values={"source_filename": self.file_path.name}
+                )
+
+            # Validate fields using first object
+            if isinstance(first_obj, list) and first_obj:
+                first_item = first_obj[0]
+            elif isinstance(first_obj, list):
+                raise NoDataInFileError(
+                    error_values={"source_filename": self.file_path.name}
+                )
+            else:
+                first_item = first_obj
+
+            flattened_first = self._flatten_dict(first_item)
+            actual_fields = set(flattened_first.keys())
+            self._validate_fields(actual_fields)
+
+            # Merge first object back into the iterator
+            all_objects = chain([first_obj], objects)
+
+            batch = [None] * self.batch_size
+            batch_index = 0
+            for object in all_objects:
+                items_to_process = object if isinstance(object, list) else list(object)
+                for item in items_to_process:
+                    batch[batch_index] = self._flatten_dict(item)
+                    batch_index += 1
+                    self.rows_read += 1
+
+                    if batch_index == self.batch_size:
+                        yield batch
+                        batch[:] = [None] * self.batch_size
+                        batch_index = 0
+
+            if batch_index > 0:
+                yield batch[:batch_index]

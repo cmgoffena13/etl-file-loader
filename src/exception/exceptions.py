@@ -44,13 +44,22 @@ class AuditFailedError(BaseFileErrorEmailException):
         )
 
 
+class NoDataInFileError(BaseFileErrorEmailException):
+    def __init__(self, error_values: dict[str, Any]):
+        super().__init__(error_values=error_values)
+
+    @property
+    def email_message(self) -> str:
+        return "No data found in file: {source_filename}"
+
+
 class MissingHeaderError(BaseFileErrorEmailException):
     def __init__(self, error_values: dict[str, Any]):
         super().__init__(error_values=error_values)
 
     @property
     def email_message(self) -> str:
-        return ""
+        return "No header found in file: {source_filename}"
 
 
 class MissingColumnsError(BaseFileErrorEmailException):
@@ -59,7 +68,11 @@ class MissingColumnsError(BaseFileErrorEmailException):
 
     @property
     def email_message(self) -> str:
-        return ""
+        return (
+            "Missing required fields in file: {source_filename}\n"
+            "Required fields: {required_fields_display_formatted}\n"
+            "Missing fields: {missing_fields_display_formatted}"
+        )
 
 
 class ValidationThresholdExceededError(BaseFileErrorEmailException):
@@ -69,8 +82,7 @@ class ValidationThresholdExceededError(BaseFileErrorEmailException):
     @property
     def email_message(self) -> str:
         return (
-            "Validation error rate ({truncated_error_rate}) exceeds threshold "
-            "({threshold}) for file: {source_filename}. \n"
+            "Validation error rate ({truncated_error_rate}) exceeds threshold ({threshold}) for file: {source_filename} \n"
             "Total Records Processed: {records_validated} \n"
             "Failed Records: {validation_errors} "
         )

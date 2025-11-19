@@ -97,7 +97,7 @@ class ExcelReader(BaseReader):
 
         if no_valid_headers or all_default_names:
             raise MissingHeaderError(
-                f"Empty or invalid column headers in Excel file: {self.file_path}"
+                error_values={"source_filename": self.file_path.name}
             )
 
         self._validate_fields(actual_headers)
