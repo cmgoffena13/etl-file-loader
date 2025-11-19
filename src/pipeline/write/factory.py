@@ -1,6 +1,7 @@
 from typing import Type
 
-from sqlalchemy import Engine, MetaData
+from sqlalchemy import Engine, MetaData, Table
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.mssql import SQLServerWriter
@@ -25,12 +26,12 @@ class WriterFactory:
 
     @classmethod
     def create_writer(
-        cls, source: DataSource, engine: Engine, metadata: MetaData
-    ) -> Type[BaseWriter]:
+        cls, source: DataSource, engine: Engine, file_load_dlq_table: Table
+    ) -> BaseWriter:
         try:
             writer_class = cls._writers[config.DRIVERNAME]
         except KeyError:
             raise ValueError(
-                f"Unsupported database driver for writer: {config.DRIVERNAME}. Supported drivers: {cls.get_supported_drivers()}"
+                f"Unsupported database driver for writer: {config.DRIVERNAME}. Supported drivers: {cls.get_supported_extensions()}"
             )
-        return writer_class(source, engine, metadata)
+        return writer_class(source, engine, file_load_dlq_table)

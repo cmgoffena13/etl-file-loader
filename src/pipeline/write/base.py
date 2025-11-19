@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from typing import Any, Dict, Iterator
 
-from sqlalchemy import Table, insert, text
+from sqlalchemy import Engine, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.pipeline.db_utils import db_get_column_names
@@ -16,11 +16,12 @@ class BaseWriter(ABC):
     def __init__(
         self,
         source: DataSource,
-        Session: sessionmaker[Session],
+        engine: Engine,
         file_load_dlq_table: Table,
     ):
         self.source: DataSource = source
-        self.Session: sessionmaker[Session] = Session
+        self.engine: Engine = engine
+        self.Session: sessionmaker[Session] = sessionmaker(bind=engine)
         self.columns: list[str] = db_get_column_names(self.source)
         self.batch_size: int = config.BATCH_SIZE
         self.file_load_dlq_table: Table = file_load_dlq_table

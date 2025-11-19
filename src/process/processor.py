@@ -7,11 +7,11 @@ from typing import Optional
 
 from sqlalchemy import Engine, MetaData, Table
 
-from process.file_helper import FileHelper
 from src.notify.factory import NotifierFactory
 from src.notify.slack import AlertLevel
 from src.pipeline.runner import PipelineRunner
 from src.process.db import create_tables, setup_db
+from src.process.file_helper import FileHelper
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
@@ -28,13 +28,9 @@ class Processor:
         self.file_paths_queue: Queue = FileHelper.scan_directory(config.DIRECTORY_PATH)
         self.engine: Engine = engine
         self.metadata: MetaData = metadata
-        self.metadata.reflect(bind=self.engine, only=["file_load_log", "file_load_dlq"])
-        self.file_load_log_table: Table = Table(
-            "file_load_log", self.metadata, autoload_with=self.engine
-        )
-        self.file_load_dlq_table: Table = Table(
-            "file_load_dlq", self.metadata, autoload_with=self.engine
-        )
+        create_tables(self.metadata, self.engine)
+        self.file_load_log_table: Table = self.metadata.tables["file_load_log"]
+        self.file_load_dlq_table: Table = self.metadata.tables["file_load_dlq"]
         self.results: list[tuple[bool, str, Optional[str]]] = []
 
     def process_file(self, file_path: Path):
@@ -44,7 +40,14 @@ class Processor:
             logger.exception(f"Error finding source for file {file_path.name}: {e}")
             self.results.append((False, file_path.name, str(e)))
         if source is not None:
-            runner = PipelineRunner(file_path, source, self.engine, self.metadata)
+            runner = PipelineRunner(
+                file_path=file_path,
+                source=source,
+                engine=self.engine,
+                metadata=self.metadata,
+                file_load_log_table=self.file_load_log_table,
+                file_load_dlq_table=self.file_load_dlq_table,
+            )
             result = runner.run()
             self.results.append(result)
 
@@ -59,7 +62,6 @@ class Processor:
                 break
 
     def process_files_in_parallel(self):
-        create_tables(self.metadata, self.engine)
         try:
             futures = [
                 self.thread_pool.submit(self._worker, self.file_paths_queue)

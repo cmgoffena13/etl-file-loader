@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: file-loader-postgres
+    environment:
+      POSTGRES_USER: fileloader
+      POSTGRES_PASSWORD: fileloader
+      POSTGRES_DB: fileloader
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  mysql:
+    image: mysql:8.0
+    container_name: file-loader-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: fileloader
+      MYSQL_USER: fileloader
+      MYSQL_PASSWORD: fileloader
+      MYSQL_DATABASE: fileloader
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: file-loader-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "FileLoader123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql-tools
+    platform: linux/amd64
+    container_name: file-loader-sqlserver-init
+    depends_on:
+      - sqlserver
+    volumes:
+      - ./docker/sqlserver-init.sql:/init.sql
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        echo "Waiting for SQL Server to be ready..."
+        until /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "FileLoader123!" -Q "SELECT 1" > /dev/null 2>&1
+        do
+          sleep 5
+        done
+        echo "Running initialization script..."
+        /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "FileLoader123!" -i /init.sql
+        echo "Initialization complete."
+
+  file-loader-sqlserver-bulk:
+    build:
+      context: .
+      dockerfile: Dockerfile.sqlserver
+    container_name: file-loader-sqlserver-bulk
+    depends_on:
+      - sqlserver
+    environment:
+      DEV_DATABASE_URL: mssql+pyodbc://sa:FileLoader123!@sqlserver:1433/fileloader?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes
+      DEV_SQL_SERVER_SQLBULKCOPY_FLAG: "true"
+
+volumes:
+  postgres_data:
+  mysql_data:
+  sqlserver_data:
+

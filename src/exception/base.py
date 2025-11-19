@@ -7,7 +7,7 @@ class BaseFileErrorEmailException(Exception, ABC):
         super().__init__()
         self.error_values: dict[str, Any] = error_values
 
-    @abstractmethod
     @property
+    @abstractmethod
     def email_message(self) -> str:
         pass

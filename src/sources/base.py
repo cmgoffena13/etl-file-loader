@@ -3,8 +3,6 @@ from typing import Optional, Type
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from src.utils import get_file_extension
-
 
 class TableModel(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -27,16 +25,6 @@ class DataSource(BaseModel):
             raise ValueError(
                 f"Grain columns {invalid_grain} are not fields in {self.source_model.__name__}. "
                 f"Available fields: {sorted(model_fields)}"
-            )
-        return self
-
-    @model_validator(mode="after")
-    def validate_extensions(self):
-        extensions = get_file_extension(Path(self.file_path))
-        if extensions not in self.extensions:
-            raise ValueError(
-                f"File extension {extensions} is not supported for {self.source_model.__name__}. "
-                f"Supported extensions: {self.extensions}"
             )
         return self
 

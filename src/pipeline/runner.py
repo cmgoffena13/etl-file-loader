@@ -7,7 +7,8 @@ from opentelemetry import trace
 from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.exception.exceptions import BaseFileErrorEmailException, DuplicateFileError
+from src.exception.base import BaseFileErrorEmailException
+from src.exception.exceptions import DuplicateFileError
 from src.notify.factory import NotifierFactory
 from src.pipeline.db_utils import (
     db_check_if_duplicate_file,
@@ -63,7 +64,7 @@ class PipelineRunner:
             file_path, source, self.reader.starting_row_number, self.log.id
         )
         self.writer: BaseWriter = WriterFactory.create_writer(
-            source, engine, metadata, file_load_dlq_table
+            source, engine, file_load_dlq_table
         )
 
     @retry()
@@ -78,19 +79,23 @@ class PipelineRunner:
         )
         with self.Session() as session:
             session.execute(stmt)
+            session.commit()
 
-    def check_if_processed(self) -> bool:
-        already_processed = db_check_if_duplicate_file(
+    def check_if_processed(self) -> None:
+        if db_check_if_duplicate_file(
             self.Session, self.data_source, self.source_filename
-        )
-        if already_processed:
+        ):
             logger.warning(
-                f"[log_id: {self.log.id}] File {self.source_filename} has already been processed"
+                f"[log_id={self.log.id}] File {self.source_filename} has already been processed"
             )
             FileHelper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
-            raise DuplicateFileError
-        return already_processed
+            self._log_update(self.log)
+            raise DuplicateFileError(
+                error_values={"source_filename": self.source_filename}
+            )
+        self.log.duplicate_skipped = False
+        self._log_update(self.log)
 
     def archive_file(self) -> None:
         self.log.archive_copy_started_at = pendulum.now("UTC")
@@ -148,13 +153,12 @@ class PipelineRunner:
     def run(self) -> tuple[bool, str, Optional[str]]:
         with tracer.start_as_current_span(f"FILE: {self.source_filename}") as span:
             try:
-                already_processed = self.check_if_processed()
-                if not already_processed:
-                    self.archive_file()
-                    self.write_data(self.validate_data(self.read_data()))
-                    self.audit_data()
-                    self.publish_data()
-                    self.cleanup()
+                self.check_if_processed()
+                self.archive_file()
+                self.write_data(self.validate_data(self.read_data()))
+                self.audit_data()
+                self.publish_data()
+                self.cleanup()
                 self.log.ended_at = pendulum.now("UTC")
                 self.log.success = True
                 self.result = (True, self.source_filename, None)

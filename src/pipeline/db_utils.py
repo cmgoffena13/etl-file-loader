@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.process.log import FileLoadLog
 from src.settings import config
-from src.sources.base import DataSource, FileLoadLog
+from src.sources.base import DataSource
 from src.sources.systems.master import MASTER_REGISTRY
 from src.utils import retry
 
@@ -200,9 +200,9 @@ def db_create_stage_table(
 
 @retry()
 def db_check_if_duplicate_file(
-    session: Session, source: DataSource, source_filename: str
+    Session: sessionmaker[Session], source: DataSource, source_filename: str
 ) -> bool:
-    with session() as session:
+    with Session() as session:
         try:
             check_sql = text(
                 f"SELECT CASE WHEN EXISTS(SELECT 1 FROM {source.table_name} WHERE source_filename = :filename) THEN 1 ELSE 0 END"

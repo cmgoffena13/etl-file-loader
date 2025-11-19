@@ -30,6 +30,8 @@ class ExcelReader(BaseReader):
     def _build_date_field_mapping(self) -> Dict[str, type]:
         date_field_mapping = {}
         for name, field in self.source.source_model.model_fields.items():
+            field_type = field.annotation
+            # Unwrap Optional[T] (which is Union[T, None]) to get T
             origin = get_origin(field_type)
             if origin is not None:
                 args = get_args(field_type)

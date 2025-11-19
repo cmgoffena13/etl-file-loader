@@ -58,7 +58,7 @@ class Validator:
             ),
             "file_row_number": index,
             "source_filename": self.source_filename,
-            "file_load_log_id": 0,  # TODO: add file load log id
+            "file_load_log_id": self.log_id,
             "target_table_name": self.source.table_name,
             "failed_at": pendulum.now("UTC"),
         }
@@ -69,7 +69,7 @@ class Validator:
 
     def validate(
         self, batches: Iterator[list[Dict[str, Any]]]
-    ) -> Iterator[list[tuple(bool, Dict[str, Any])]]:
+    ) -> Iterator[list[tuple[bool, Dict[str, Any]]]]:
         total_records = 0
         for batch in batches:
             batch_results = []
@@ -79,19 +79,21 @@ class Validator:
                 record = rename_keys_and_filter_record(record, self.field_mapping)
                 try:
                     record = self.adapter.validate_python(record).model_dump()
-                    batch_results.append(tuple(True, record))
+                    batch_results.append((True, record))
                 except ValidationError as e:
                     self.validation_errors += 1
                     passed = False
                     error_details = (
                         e.errors() if hasattr(e, "errors") else [{"msg": str(e)}]
                     )
-                    failed_field_names = extract_failed_field_names(e, self.grain)
+                    failed_field_names = extract_failed_field_names(
+                        e, self.source.grain
+                    )
                     file_row_number = total_records - self.starting_row_number + 1
                     dlq_record = self._create_dlq_record(
                         record, failed_field_names, error_details, file_row_number
                     )
-                    batch_results.append(tuple(False, dlq_record))
+                    batch_results.append((False, dlq_record))
 
                     # Collect sample errors (first 5)
                     if len(self.sample_validation_errors) < 5:
@@ -106,11 +108,11 @@ class Validator:
                         )
                 if passed:
                     record["etl_row_hash"] = db_create_row_hash(
-                        record, sorted_keys=self.sorted_field_keys
+                        record, sorted_keys=self.sorted_keys
                     )
                     record["source_filename"] = self.source_filename
                     record["file_load_log_id"] = self.log_id
-                    batch_results.append(tuple(True, record))
+                    batch_results.append((True, record))
                 self.records_validated += 1
                 if len(batch_results) == self.batch_size:
                     yield batch_results

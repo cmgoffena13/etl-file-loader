@@ -69,9 +69,9 @@ class GlobalConfig(BaseConfig):
 
 
 class DevConfig(GlobalConfig):
-    DIRECTORY_PATH: Path = Path("src/tests/test_data")
-    ARCHIVE_PATH: Path = Path("src/tests/archive_data")
-    DUPLICATE_FILES_PATH: Path = Path("src/tests/duplicate_files_data")
+    DIRECTORY_PATH: Path = Path("src/tests/test_directory")
+    ARCHIVE_PATH: Path = Path("src/tests/test_archive")
+    DUPLICATE_FILES_PATH: Path = Path("src/tests/test_duplicate_files")
     LOG_LEVEL: str = "DEBUG"
     OTEL_PYTHON_LOG_CORRELATION: bool = False
 
