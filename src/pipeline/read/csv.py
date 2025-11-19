@@ -48,17 +48,20 @@ class CSVReader(BaseReader):
 
             self._validate_fields(set(reader.fieldnames))
 
-            batch = []
+            batch = [None] * self.batch_size
+            batch_index = 0
             for index, row in enumerate(reader):
                 if index < self.skip_rows:
                     continue
 
-                batch.append(row)
+                batch[batch_index] = row
+                batch_index += 1
                 self.rows_read += 1
 
-                if len(batch) == self.batch_size:
+                if batch_index == self.batch_size:
                     yield batch
-                    batch = []
+                    batch = [None] * self.batch_size
+                    batch_index = 0
 
-            if batch:
-                yield batch
+            if batch_index > 0:
+                yield batch[:batch_index]

@@ -39,49 +39,56 @@ class BaseWriter(ABC):
         stage_table_name: str,
     ):
         sql_insert_template = self.create_stage_insert_sql(stage_table_name)
-        valid_records = []
+        valid_records = [None] * self.batch_size
+        valid_index = 0
         invalid_records = []
         for batch in batches:
             for passed, record in batch:
                 if passed:
-                    valid_records.append(record)
+                    valid_records[valid_index] = record
+                    valid_index += 1
+                    if valid_index == self.batch_size:
+                        with self.Session() as session:
+                            try:
+                                session.execute(sql_insert_template, valid_records)
+                                session.commit()
+                                self.rows_written_to_stage += len(valid_records)
+                                valid_records = [None] * self.batch_size
+                                valid_index = 0
+                            except Exception as e:
+                                logger.exception(
+                                    f"Error inserting records into stage table {stage_table_name}: {e}"
+                                )
+                                session.rollback()
+                                raise e
                 else:
                     invalid_records.append(record)
-                if len(valid_records) == self.batch_size:
-                    with self.Session() as session:
-                        try:
-                            session.execute(sql_insert_template, valid_records)
-                            session.commit()
-                            self.rows_written_to_stage += len(valid_records)
-                            valid_records = []
-                        except Exception as e:
-                            logger.exception(
-                                f"Error inserting records into stage table {stage_table_name}: {e}"
-                            )
-                            session.rollback()
-                            raise e
-                if len(invalid_records) == self.batch_size:
-                    with self.Session() as session:
-                        try:
-                            stmt = insert(self.file_load_dlq_table).values(
-                                invalid_records
-                            )
-                            session.execute(stmt)
-                            session.commit()
-                            self.rows_written_to_stage += len(invalid_records)
-                            invalid_records = []
-                        except Exception as e:
-                            logger.exception(
-                                f"Error inserting records into file load DLQ table: {e}"
-                            )
-                            session.rollback()
-                            raise e
-            if valid_records:
+                    if len(invalid_records) == self.batch_size:
+                        with self.Session() as session:
+                            try:
+                                stmt = insert(self.file_load_dlq_table).values(
+                                    invalid_records
+                                )
+                                session.execute(stmt)
+                                session.commit()
+                                self.rows_written_to_stage += len(invalid_records)
+                                invalid_records.clear()
+                            except Exception as e:
+                                logger.exception(
+                                    f"Error inserting records into file load DLQ table: {e}"
+                                )
+                                session.rollback()
+                                raise e
+            if valid_index > 0:
                 with self.Session() as session:
                     try:
-                        session.execute(sql_insert_template, valid_records)
+                        session.execute(
+                            sql_insert_template, valid_records[:valid_index]
+                        )
                         session.commit()
-                        self.rows_written_to_stage += len(valid_records)
+                        self.rows_written_to_stage += valid_index
+                        valid_records = [None] * self.batch_size
+                        valid_index = 0
                     except Exception as e:
                         logger.exception(
                             f"Error inserting records into stage table {stage_table_name}: {e}"
@@ -95,6 +102,7 @@ class BaseWriter(ABC):
                         session.execute(stmt)
                         session.commit()
                         self.rows_written_to_stage += len(invalid_records)
+                        invalid_records.clear()
                     except Exception as e:
                         logger.exception(
                             f"Error inserting records into file load DLQ table: {e}"

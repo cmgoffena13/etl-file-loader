@@ -72,17 +72,21 @@ class Validator:
     ) -> Iterator[list[tuple[bool, Dict[str, Any]]]]:
         total_records = 0
         for batch in batches:
-            batch_results = []
+            batch_results = [None] * self.batch_size
+            batch_index = 0
             for record in batch:
                 total_records += 1
-                passed = True
                 record = rename_keys_and_filter_record(record, self.field_mapping)
                 try:
                     record = self.adapter.validate_python(record).model_dump()
-                    batch_results.append((True, record))
+                    record["etl_row_hash"] = db_create_row_hash(
+                        record, sorted_keys=self.sorted_keys
+                    )
+                    record["source_filename"] = self.source_filename
+                    record["file_load_log_id"] = self.log_id
+                    batch_results[batch_index] = (True, record)
                 except ValidationError as e:
                     self.validation_errors += 1
-                    passed = False
                     error_details = (
                         e.errors() if hasattr(e, "errors") else [{"msg": str(e)}]
                     )
@@ -93,7 +97,7 @@ class Validator:
                     dlq_record = self._create_dlq_record(
                         record, failed_field_names, error_details, file_row_number
                     )
-                    batch_results.append((False, dlq_record))
+                    batch_results[batch_index] = (False, dlq_record)
 
                     # Collect sample errors (first 5)
                     if len(self.sample_validation_errors) < 5:
@@ -106,19 +110,14 @@ class Validator:
                                 "record": record,
                             }
                         )
-                if passed:
-                    record["etl_row_hash"] = db_create_row_hash(
-                        record, sorted_keys=self.sorted_keys
-                    )
-                    record["source_filename"] = self.source_filename
-                    record["file_load_log_id"] = self.log_id
-                    batch_results.append((True, record))
+                batch_index += 1
                 self.records_validated += 1
-                if len(batch_results) == self.batch_size:
+                if batch_index == self.batch_size:
                     yield batch_results
-                    batch_results = []
-            if batch_results:
-                yield batch_results
+                    batch_results = [None] * self.batch_size
+                    batch_index = 0
+            if batch_index > 0:
+                yield batch_results[:batch_index]
 
         if self.records_validated > 0 and self.validation_errors > 0:
             error_rate = self.validation_errors / self.records_validated

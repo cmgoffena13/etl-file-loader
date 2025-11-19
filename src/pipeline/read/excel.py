@@ -107,17 +107,20 @@ class ExcelReader(BaseReader):
         if self.skip_rows <= 0:
             yield self._convert_excel_dates(first_record, date_field_mapping)
 
-        batch = []
+        batch = [None] * self.batch_size
+        batch_index = 0
         for index, record in enumerate(records, start=1):
             if index < self.skip_rows:
                 continue
 
-            batch.append(self._convert_excel_dates(record, date_field_mapping))
+            batch[batch_index] = self._convert_excel_dates(record, date_field_mapping)
+            batch_index += 1
             self.rows_read += 1
 
-            if len(batch) == self.batch_size:
+            if batch_index == self.batch_size:
                 yield batch
-                batch = []
+                batch = [None] * self.batch_size
+                batch_index = 0
 
-        if batch:
-            yield batch
+        if batch_index > 0:
+            yield batch[:batch_index]

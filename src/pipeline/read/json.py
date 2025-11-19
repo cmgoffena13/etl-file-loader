@@ -60,19 +60,22 @@ class JSONReader(BaseReader):
             # Merge first object back into the iterator
             all_objects = chain([first_obj], objects)
 
-            batch = []
+            batch = [None] * self.batch_size
+            batch_index = 0
             for object in all_objects:
                 items_to_process = object if isinstance(object, list) else list(object)
                 for item in items_to_process:
-                    batch.append(self._flatten_dict(item))
+                    batch[batch_index] = self._flatten_dict(item)
+                    batch_index += 1
                     self.rows_read += 1
 
-                    if len(batch) == self.batch_size:
+                    if batch_index == self.batch_size:
                         yield batch
-                        batch = []
+                        batch = [None] * self.batch_size
+                        batch_index = 0
 
-            if batch:
-                yield batch
+            if batch_index > 0:
+                yield batch[:batch_index]
 
     def _flatten_dict(
         self, dictionary: Dict[str, Any], parent_key: str = "", sep: str = "_"
