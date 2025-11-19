@@ -38,10 +38,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.process.log import FileLoadLog
 from src.settings import config
 from src.sources.base import DataSource
-from src.sources.systems.master import MASTER_REGISTRY
 from src.utils import retry
 
 logger = logging.getLogger(__name__)

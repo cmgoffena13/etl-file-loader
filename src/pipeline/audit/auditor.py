@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exception.exceptions import AuditFailedError, GrainValidationError
@@ -21,15 +21,18 @@ class Auditor:
         self,
         file_path: Path,
         source: DataSource,
-        Session: sessionmaker[Session],
+        engine: Engine,
         stage_table_name: str,
+        log_id: int,
     ):
         self.source: DataSource = source
         self.stage_table_name: str = stage_table_name
         self.source_filename: str = file_path.name
-        self.Session: sessionmaker[Session] = Session
+        self.engine: Engine = engine
+        self.Session: sessionmaker[Session] = sessionmaker(bind=engine)
         self.audit_query: str = source.audit_query
         self.failed_audits: list[str] = []
+        self.log_id: int = log_id
 
     def _get_duplicate_grain_examples(self):
         duplicate_sql = db_create_duplicate_grain_examples_sql(self.source)
@@ -54,6 +57,7 @@ class Auditor:
             aliased_record["duplicate_count"] = record_dict["duplicate_count"]
             record_str = ", ".join(f"{k}: {v}" for k, v in aliased_record.items())
             duplicate_examples_formatted += f"  - {record_str}\n"
+        logger.error(f"[log_id={self.log_id}] Grain validation failed")
         raise GrainValidationError(
             error_values={
                 "source_filename": self.source_filename,
@@ -67,6 +71,7 @@ class Auditor:
         grain_sql = db_create_grain_validation_sql(self.source)
         grain_sql = grain_sql.format(table=self.stage_table_name)
         with self.Session() as session:
+            logger.info(f"[log_id={self.log_id}] Auditing grain")
             result = session.execute(text(grain_sql)).fetchone()
             if result._mapping["grain_unique"] == 0:
                 duplicate_examples = self._get_duplicate_grain_examples()
@@ -78,6 +83,7 @@ class Auditor:
             return
 
         with self.Session() as session:
+            logger.info(f"[log_id={self.log_id}] Auditing data")
             audit_sql = text(
                 self.audit_query.format(table=self.stage_table_name).strip()
             )
@@ -89,6 +95,7 @@ class Auditor:
                 self.failed_audits.append(audit_name)
         if self.failed_audits:
             failed_audits_formatted = ", ".join(self.failed_audits)
+            logger.error(f"[log_id={self.log_id}] Audit failed")
             raise AuditFailedError(
                 error_values={
                     "source_filename": self.source_filename,

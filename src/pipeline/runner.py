@@ -46,7 +46,9 @@ class PipelineRunner:
         self.metadata: MetaData = metadata
         self.engine: Engine = engine
         self.Session: sessionmaker[Session] = sessionmaker(bind=self.engine)
-        self.stage_table_name: Optional[str] = None
+        self.stage_table_name: str = db_create_stage_table(
+            self.engine, self.metadata, self.source, self.source_filename
+        )
         self.file_load_log_table: Table = file_load_log_table
         self.file_load_dlq_table: Table = file_load_dlq_table
         self.result: Optional[tuple[bool, str]] = None
@@ -70,7 +72,11 @@ class PipelineRunner:
             self.source, self.engine, self.file_load_dlq_table, self.log.id
         )
         self.auditor: Auditor = Auditor(
-            self.file_path, self.source, self.Session, self.stage_table_name
+            self.file_path,
+            self.source,
+            self.engine,
+            self.stage_table_name,
+            self.log.id,
         )
 
     @retry()
@@ -135,10 +141,6 @@ class PipelineRunner:
     def write_data(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
         self.log.write_started_at = pendulum.now("UTC")
 
-        self.stage_table_name = db_create_stage_table(
-            self.engine, self.metadata, self.source, self.source_filename
-        )
-        self.auditor.stage_table_name = self.stage_table_name
         self.writer.write(batches, self.stage_table_name)
 
         self.log.write_ended_at = pendulum.now("UTC")
@@ -146,7 +148,7 @@ class PipelineRunner:
         self.log.write_success = True
         self._log_update(self.log)
 
-    def audit_data(self):
+    def audit_data(self) -> None:
         self.log.audit_started_at = pendulum.now("UTC")
         self.auditor.audit_grain()
         self.auditor.audit_data()
@@ -154,7 +156,7 @@ class PipelineRunner:
         self.log.audit_success = True
         self._log_update(self.log)
 
-    def publish_data(self):
+    def publish_data(self) -> None:
         pass
 
     def cleanup(self) -> None:
@@ -205,4 +207,9 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
                 self._log_update(self.log)
+            finally:
+                pass
             return self.result
+
+    def __del__(self):
+        pass
