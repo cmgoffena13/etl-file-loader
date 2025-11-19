@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.exception.base import BaseFileErrorEmailException
 from src.exception.exceptions import DuplicateFileError
 from src.notify.factory import NotifierFactory
+from src.pipeline.audit.auditor import Auditor
 from src.pipeline.db_utils import (
     db_check_if_duplicate_file,
     db_create_stage_table,
@@ -39,7 +40,7 @@ class PipelineRunner:
         file_load_log_table: Table,
         file_load_dlq_table: Table,
     ):
-        self.data_source: DataSource = source
+        self.source: DataSource = source
         self.file_path: Path = file_path
         self.source_filename: str = file_path.name
         self.metadata: MetaData = metadata
@@ -59,12 +60,17 @@ class PipelineRunner:
             self.log.source_filename,
             self.log.started_at,
         )
-        self.reader: BaseReader = ReaderFactory.create_reader(file_path, source)
+        self.reader: BaseReader = ReaderFactory.create_reader(
+            self.file_path, self.source
+        )
         self.validator: Validator = Validator(
-            file_path, source, self.reader.starting_row_number, self.log.id
+            self.file_path, self.source, self.reader.starting_row_number, self.log.id
         )
         self.writer: BaseWriter = WriterFactory.create_writer(
-            source, engine, file_load_dlq_table
+            self.source, self.engine, self.file_load_dlq_table
+        )
+        self.auditor: Auditor = Auditor(
+            self.file_path, self.source, self.Session, self.stage_table_name
         )
 
     @retry()
@@ -82,9 +88,7 @@ class PipelineRunner:
             session.commit()
 
     def check_if_processed(self) -> None:
-        if db_check_if_duplicate_file(
-            self.Session, self.data_source, self.source_filename
-        ):
+        if db_check_if_duplicate_file(self.Session, self.source, self.source_filename):
             logger.warning(
                 f"[log_id={self.log.id}] File {self.source_filename} has already been processed"
             )
@@ -132,8 +136,9 @@ class PipelineRunner:
         self.log.write_started_at = pendulum.now("UTC")
 
         self.stage_table_name = db_create_stage_table(
-            self.engine, self.metadata, self.data_source, self.source_filename
+            self.engine, self.metadata, self.source, self.source_filename
         )
+        self.auditor.stage_table_name = self.stage_table_name
         self.writer.write(batches, self.stage_table_name)
 
         self.log.write_ended_at = pendulum.now("UTC")
@@ -142,7 +147,12 @@ class PipelineRunner:
         self._log_update(self.log)
 
     def audit_data(self):
-        pass
+        self.log.audit_started_at = pendulum.now("UTC")
+        self.auditor.audit_grain()
+        self.auditor.audit_data()
+        self.log.audit_ended_at = pendulum.now("UTC")
+        self.log.audit_success = True
+        self._log_update(self.log)
 
     def publish_data(self):
         pass

@@ -32,7 +32,11 @@ class AuditFailedError(BaseFileErrorEmailException):
 
     @property
     def email_message(self) -> str:
-        return ""
+        return (
+            "Audit checks failed for file: {source_filename}\n",
+            "Table: {stage_table_name}\n",
+            "Failed audits: {failed_audits_formatted}\n",
+        )
 
 
 class MissingHeaderError(BaseFileErrorEmailException):
