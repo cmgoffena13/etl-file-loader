@@ -1,14 +1,16 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.exception.exceptions import AuditFailedError
+from src.exception.exceptions import AuditFailedError, GrainValidationError
 from src.pipeline.db_utils import (
     db_create_duplicate_grain_examples_sql,
     db_create_grain_validation_sql,
 )
+from src.pipeline.model_utils import get_field_alias
 from src.sources.base import DataSource
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,32 @@ class Auditor:
         with self.Session() as session:
             return session.execute(text(duplicate_sql)).fetchall()
 
+    def _format_duplicate_examples(
+        self, duplicate_examples: list[dict[str, Any]]
+    ) -> str:
+        grain_field_aliases = {
+            grain_field: get_field_alias(self.source, grain_field)
+            for grain_field in self.source.grain
+        }
+        duplicate_examples_formatted = ""
+        for record in duplicate_examples:
+            record_dict = dict(record._mapping)
+            aliased_record = {
+                grain_field_aliases[grain_field]: record_dict[grain_field]
+                for grain_field in self.source.grain
+            }
+            aliased_record["duplicate_count"] = record_dict["duplicate_count"]
+            record_str = ", ".join(f"{k}: {v}" for k, v in aliased_record.items())
+            duplicate_examples_formatted += f"  - {record_str}\n"
+        raise GrainValidationError(
+            error_values={
+                "source_filename": self.source_filename,
+                "stage_table_name": self.stage_table_name,
+                "grain_aliases_formatted": ", ".join(grain_field_aliases.values()),
+                "duplicate_examples_formatted": duplicate_examples_formatted,
+            }
+        )
+
     def audit_grain(self):
         grain_sql = db_create_grain_validation_sql(self.source)
         grain_sql = grain_sql.format(table=self.stage_table_name)
@@ -42,6 +70,7 @@ class Auditor:
             result = session.execute(text(grain_sql)).fetchone()
             if result._mapping["grain_unique"] == 0:
                 duplicate_examples = self._get_duplicate_grain_examples()
+                self._format_duplicate_examples(duplicate_examples)
 
     def audit_data(self):
         if self.audit_query is None:

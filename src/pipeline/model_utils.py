@@ -126,3 +126,10 @@ def extract_validation_error_message(
 
 def create_sorted_keys(source: DataSource) -> tuple[str]:
     return tuple(sorted(source.source_model.model_fields.keys()))
+
+
+def get_field_alias(source: DataSource, field_name: str) -> str:
+    field_info = source.source_model.model_fields.get(field_name)
+    if field_info and field_info.alias:
+        return field_info.alias
+    return field_name

@@ -23,7 +23,12 @@ class GrainValidationError(BaseFileErrorEmailException):
 
     @property
     def email_message(self) -> str:
-        return ""
+        return (
+            "Grain values are not unique for file: {source_filename}\n",
+            "Table: {stage_table_name}\n",
+            "Grain columns (file column names): {grain_aliases_formatted}\n",
+            "Example duplicate grain violations: \n{duplicate_examples_formatted}",
+        )
 
 
 class AuditFailedError(BaseFileErrorEmailException):
@@ -35,7 +40,7 @@ class AuditFailedError(BaseFileErrorEmailException):
         return (
             "Audit checks failed for file: {source_filename}\n",
             "Table: {stage_table_name}\n",
-            "Failed audits: {failed_audits_formatted}\n",
+            "Failed audits: \n{failed_audits_formatted}",
         )
 
 
@@ -65,9 +70,9 @@ class ValidationThresholdExceededError(BaseFileErrorEmailException):
     def email_message(self) -> str:
         return (
             "Validation error rate ({truncated_error_rate}) exceeds threshold "
-            "({threshold}) for file: {source_filename}. "
-            "Total Records Processed: {records_validated}, "
-            "Failed Records: {validation_errors}. "
+            "({threshold}) for file: {source_filename}. \n"
+            "Total Records Processed: {records_validated} \n"
+            "Failed Records: {validation_errors} "
         )
 
 
