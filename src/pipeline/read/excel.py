@@ -1,3 +1,5 @@
+import logging
+from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, Iterator, get_args, get_origin
 
@@ -7,7 +9,9 @@ from pydantic_extra_types.pendulum_dt import Date, DateTime
 
 from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
-from src.sources.base import ExcelSource
+from src.sources.base import DataSource, ExcelSource
+
+logger = logging.getLogger(__name__)
 
 
 class ExcelReader(BaseReader):
@@ -17,8 +21,15 @@ class ExcelReader(BaseReader):
 
     SOURCE_TYPE = ExcelSource
 
-    def __init__(self, file_path: Path, source, sheet_name: str, skip_rows: int):
-        super().__init__(file_path, source)
+    def __init__(
+        self,
+        file_path: Path,
+        source: DataSource,
+        log_id: int,
+        sheet_name: str,
+        skip_rows: int,
+    ):
+        super().__init__(file_path, source, log_id)
         self.sheet_name: str = sheet_name
         self.skip_rows: int = skip_rows
 
@@ -104,13 +115,13 @@ class ExcelReader(BaseReader):
 
         date_field_mapping = self._build_date_field_mapping()
 
-        if self.skip_rows <= 0:
-            yield self._convert_excel_dates(first_record, date_field_mapping)
+        # Merge first record back into the iterator
+        all_records = chain([first_record], records)
 
         batch = [None] * self.batch_size
         batch_index = 0
-        for index, record in enumerate(records, start=1):
-            if index < self.skip_rows:
+        for index, record in enumerate(all_records, start=1):
+            if index <= self.skip_rows:
                 continue
 
             batch[batch_index] = self._convert_excel_dates(record, date_field_mapping)
@@ -118,9 +129,15 @@ class ExcelReader(BaseReader):
             self.rows_read += 1
 
             if batch_index == self.batch_size:
+                logger.info(
+                    f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                )
                 yield batch
                 batch[:] = [None] * self.batch_size
                 batch_index = 0
 
         if batch_index > 0:
+            logger.info(
+                f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
+            )
             yield batch[:batch_index]

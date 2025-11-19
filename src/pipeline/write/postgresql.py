@@ -9,5 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class PostgreSQLWriter(BaseWriter):
-    def __init__(self, source: DataSource, engine: Engine, file_load_dlq_table: Table):
-        super().__init__(source, engine, file_load_dlq_table)
+    def __init__(
+        self,
+        source: DataSource,
+        engine: Engine,
+        file_load_dlq_table: Table,
+        log_id: int,
+    ):
+        super().__init__(source, engine, file_load_dlq_table, log_id)

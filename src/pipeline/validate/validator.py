@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
 
@@ -16,6 +17,8 @@ from src.pipeline.model_utils import (
 )
 from src.settings import config
 from src.sources.base import DataSource
+
+logger = logging.getLogger(__name__)
 
 
 class Validator:
@@ -64,9 +67,6 @@ class Validator:
         }
         return record
 
-    def _format_error_message(self, **kwargs: Any) -> str:
-        return ValidationThresholdExceededError.email_message.format(**kwargs)
-
     def validate(
         self, batches: Iterator[list[Dict[str, Any]]]
     ) -> Iterator[list[tuple[bool, Dict[str, Any]]]]:
@@ -113,10 +113,16 @@ class Validator:
                 batch_index += 1
                 self.records_validated += 1
                 if batch_index == self.batch_size:
+                    logger.info(
+                        f"[log_id={self.log_id}] Validated batch of {self.batch_size} rows"
+                    )
                     yield batch_results
                     batch_results[:] = [None] * self.batch_size
                     batch_index = 0
             if batch_index > 0:
+                logger.info(
+                    f"[log_id={self.log_id}] Validated final batch of {batch_index} rows"
+                )
                 yield batch_results[:batch_index]
 
         if self.records_validated > 0 and self.validation_errors > 0:
@@ -127,11 +133,15 @@ class Validator:
                     f"Row {err['file_row_number']}: {err['validation_error']} - Record: {err['record']}"
                     for err in self.sample_validation_errors
                 )
-                error_values = {
-                    "truncated_error_rate": truncated_error_rate,
-                    "threshold": self.source.validation_error_threshold,
-                    "records_validated": self.records_validated,
-                    "validation_errors": self.validation_errors,
-                    "additional_details": sample_errors_str,
-                }
-                raise ValidationThresholdExceededError(error_values=error_values)
+                logger.error(
+                    f"[log_id={self.log_id}] Validation threshold exceeded: {truncated_error_rate} > {self.source.validation_error_threshold}"
+                )
+                raise ValidationThresholdExceededError(
+                    error_values={
+                        "truncated_error_rate": truncated_error_rate,
+                        "threshold": self.source.validation_error_threshold,
+                        "records_validated": self.records_validated,
+                        "validation_errors": self.validation_errors,
+                        "additional_details": sample_errors_str,
+                    }
+                )

@@ -1,4 +1,5 @@
 import gzip
+import logging
 from decimal import Decimal
 from itertools import chain
 from pathlib import Path
@@ -8,14 +9,18 @@ import ijson
 
 from src.exception.exceptions import NoDataInFileError
 from src.pipeline.read.base import BaseReader
-from src.sources.base import JSONSource
+from src.sources.base import DataSource, JSONSource
+
+logger = logging.getLogger(__name__)
 
 
 class JSONReader(BaseReader):
     SOURCE_TYPE = JSONSource
 
-    def __init__(self, file_path: Path, source, array_path: str):
-        super().__init__(file_path, source)
+    def __init__(
+        self, file_path: Path, source: DataSource, log_id: int, array_path: str
+    ):
+        super().__init__(file_path, source, log_id)
         self.array_path: str = array_path
 
     @property
@@ -107,9 +112,15 @@ class JSONReader(BaseReader):
                     self.rows_read += 1
 
                     if batch_index == self.batch_size:
+                        logger.info(
+                            f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                        )
                         yield batch
                         batch[:] = [None] * self.batch_size
                         batch_index = 0
 
             if batch_index > 0:
+                logger.info(
+                    f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
+                )
                 yield batch[:batch_index]

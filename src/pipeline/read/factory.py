@@ -25,7 +25,7 @@ class ReaderFactory:
 
     @classmethod
     def create_reader(
-        cls, file_path: Path, source: Type[DataSource]
+        cls, file_path: Path, source: Type[DataSource], log_id: int
     ) -> Type[BaseReader]:
         extension = get_file_extension(file_path)
 
@@ -35,4 +35,6 @@ class ReaderFactory:
             include={"delimiter", "encoding", "skip_rows", "sheet_name", "array_path"}
         )
 
-        return reader_class(file_path, source, **reader_kwargs)
+        return reader_class(
+            file_path=file_path, source=source, log_id=log_id, **reader_kwargs
+        )

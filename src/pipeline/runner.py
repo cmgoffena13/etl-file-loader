@@ -24,7 +24,7 @@ from src.pipeline.write.factory import WriterFactory
 from src.process.file_helper import FileHelper
 from src.process.log import FileLoadLog
 from src.sources.base import DataSource
-from src.utils import retry
+from src.utils import get_error_location, retry
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -61,13 +61,13 @@ class PipelineRunner:
             self.log.started_at,
         )
         self.reader: BaseReader = ReaderFactory.create_reader(
-            self.file_path, self.source
+            self.file_path, self.source, self.log.id
         )
         self.validator: Validator = Validator(
             self.file_path, self.source, self.reader.starting_row_number, self.log.id
         )
         self.writer: BaseWriter = WriterFactory.create_writer(
-            self.source, self.engine, self.file_load_dlq_table
+            self.source, self.engine, self.file_load_dlq_table, self.log.id
         )
         self.auditor: Auditor = Auditor(
             self.file_path, self.source, self.Session, self.stage_table_name
@@ -195,9 +195,14 @@ class PipelineRunner:
                         None,
                     )  # Success since email notification was sent
                 else:
+                    error_location = get_error_location(e)
                     logger.exception(
-                        f"Error running pipeline for file {self.source_filename}: {e}"
+                        f"Error running pipeline for file {self.source_filename}: {e} at {error_location}"
                     )
-                    self.result = (False, self.source_filename, str(e))
+                    self.result = (
+                        False,
+                        self.source_filename,
+                        f"{str(e)} at {error_location}",
+                    )
                 self._log_update(self.log)
             return self.result

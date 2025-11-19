@@ -18,6 +18,7 @@ class BaseWriter(ABC):
         source: DataSource,
         engine: Engine,
         file_load_dlq_table: Table,
+        log_id: int,
     ):
         self.source: DataSource = source
         self.engine: Engine = engine
@@ -26,6 +27,7 @@ class BaseWriter(ABC):
         self.batch_size: int = config.BATCH_SIZE
         self.file_load_dlq_table: Table = file_load_dlq_table
         self.rows_written_to_stage: int = 0
+        self.log_id: int = log_id
 
     def create_stage_insert_sql(self, stage_table_name: str) -> str:
         placeholders = ", ".join([f":{col}" for col in self.columns])
@@ -50,9 +52,13 @@ class BaseWriter(ABC):
                     if valid_index == self.batch_size:
                         with self.Session() as session:
                             try:
+                                logger.info(
+                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table {stage_table_name}"
+                                )
                                 session.execute(sql_insert_template, valid_records)
                                 session.commit()
                                 self.rows_written_to_stage += len(valid_records)
+
                                 valid_records[:] = [None] * self.batch_size
                                 valid_index = 0
                             except Exception as e:
@@ -82,6 +88,9 @@ class BaseWriter(ABC):
             if valid_index > 0:
                 with self.Session() as session:
                     try:
+                        logger.info(
+                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table {stage_table_name}"
+                        )
                         session.execute(
                             sql_insert_template, valid_records[:valid_index]
                         )

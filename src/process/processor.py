@@ -55,13 +55,15 @@ class Processor:
         while True:
             try:
                 file_path = file_paths_queue.get_nowait()
-                result = self.process_file(file_path)
-                self.results.append(result)
+                self.process_file(file_path)
                 file_paths_queue.task_done()
             except Empty:
                 break
 
     def process_files_in_parallel(self):
+        logger.info(
+            f"Processing {self.file_paths_queue.qsize()} files in parallel with {self.thread_pool._max_workers} workers"
+        )
         try:
             futures = [
                 self.thread_pool.submit(self._worker, self.file_paths_queue)
@@ -69,20 +71,23 @@ class Processor:
             ]
             for future in futures:
                 future.result()
+            self.results_summary()
         finally:
             self.thread_pool.shutdown(wait=True)
 
-    def check_results_for_failures(self) -> dict[str, str]:
+    def results_summary(self):
+        success_count = 0
+        failure_count = 0
         files_failed = {}
         for result in self.results:
-            if not result[0]:
-                filename = result[1]
-                error_message = result[2] if result[2] else "Unknown error"
-                files_failed[filename] = error_message
-        return files_failed
-
-    def results_failure_summary(self):
-        files_failed = self.check_results_for_failures()
+            if result[0]:
+                success_count += 1
+            else:
+                failure_count += 1
+                files_failed[result[1]] = result[2]
+        logger.info(
+            f"Processing complete with {success_count} success(es) and {failure_count} failure(s)"
+        )
         if files_failed:
             failure_details = "\n".join(
                 f"• {filename}: {error_message}"

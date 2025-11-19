@@ -1,21 +1,29 @@
 import csv
 import gzip
+import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
 from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
-from src.settings import config
-from src.sources.base import CSVSource
+from src.sources.base import CSVSource, DataSource
+
+logger = logging.getLogger(__name__)
 
 
 class CSVReader(BaseReader):
     SOURCE_TYPE = CSVSource
 
     def __init__(
-        self, file_path: Path, source, delimiter: str, encoding: str, skip_rows: int
+        self,
+        file_path: Path,
+        source: DataSource,
+        log_id: int,
+        delimiter: str,
+        encoding: str,
+        skip_rows: int,
     ):
-        super().__init__(file_path, source)
+        super().__init__(file_path, source, log_id)
         self.delimiter: str = delimiter
         self.encoding: str = encoding
         self.skip_rows: int = skip_rows
@@ -59,9 +67,15 @@ class CSVReader(BaseReader):
                 self.rows_read += 1
 
                 if batch_index == self.batch_size:
+                    logger.info(
+                        f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                    )
                     yield batch
                     batch[:] = [None] * self.batch_size
                     batch_index = 0
 
             if batch_index > 0:
+                logger.info(
+                    f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
+                )
                 yield batch[:batch_index]

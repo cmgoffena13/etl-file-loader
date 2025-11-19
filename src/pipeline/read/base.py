@@ -8,9 +8,10 @@ from src.sources.base import DataSource
 
 
 class BaseReader(ABC):
-    def __init__(self, file_path: Path, source: DataSource):
+    def __init__(self, file_path: Path, source: DataSource, log_id: int):
         self.file_path: Path = file_path
         self.source: DataSource = source
+        self.log_id: int = log_id
         if not self.file_path.exists():
             raise FileNotFoundError(f"File not found: {self.file_path}")
         self.is_gzipped: bool = (
