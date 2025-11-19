@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 
+import pendulum
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -51,7 +52,7 @@ class BasePublisher(ABC):
         with self.Session() as session:
             records_that_exist_in_target = session.execute(
                 self._insert_count_sql()
-            ).fetchone()[0]
+            ).scalar()
             # EXISTS is more efficient than NOT EXISTS
             return self.rows_written_to_stage - records_that_exist_in_target
 
@@ -70,12 +71,21 @@ class BasePublisher(ABC):
 
     def get_update_count(self) -> int:
         with self.Session() as session:
-            return session.execute(self._update_count_sql()).fetchone()[0]
+            return session.execute(self._update_count_sql()).scalar()
 
     @abstractmethod
-    def create_publish_sql(self):
+    def create_publish_sql(self, now_iso: str):
         pass
 
-    @abstractmethod
     def publish_data(self):
-        pass
+        now_iso = pendulum.now("UTC").isoformat()
+        with self.Session() as session:
+            try:
+                session.execute(self.create_publish_sql(now_iso))
+                session.commit()
+            except Exception as e:
+                logger.exception(
+                    f"[log_id={self.log_id}] Failed to publish {self.stage_table_name} to {self.target_table_name}: {e}"
+                )
+                session.rollback()
+                raise e

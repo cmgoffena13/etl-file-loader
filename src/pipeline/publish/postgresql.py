@@ -1,7 +1,12 @@
-from sqlalchemy import Engine
+import logging
+
+import pendulum
+from sqlalchemy import Engine, text
 
 from src.pipeline.publish.base import BasePublisher
 from src.sources.base import DataSource
+
+logger = logging.getLogger(__name__)
 
 
 class PostgreSQLPublisher(BasePublisher):
@@ -17,8 +22,23 @@ class PostgreSQLPublisher(BasePublisher):
             source, engine, log_id, stage_table_name, rows_written_to_stage
         )
 
-    def create_publish_sql(self):
-        pass
+    def create_publish_sql(self, now_iso: str):
+        insert_columns = ", ".join(self.columns) + ", etl_created_at"
+        insert_values = (
+            ", ".join(f"stage.{col}" for col in self.columns) + f", '{now_iso}'"
+        )
+        update_set = (
+            ", ".join(f"{col} = stage.{col}" for col in self.update_columns)
+            + f", etl_updated_at = '{now_iso}'"
+        )
 
-    def publish_data(self):
-        pass
+        return text(f"""
+            MERGE INTO {self.target_table_name} AS target
+            USING {self.stage_table_name} AS stage
+            ON {self.join_condition}
+            WHEN MATCHED AND stage.etl_row_hash != target.etl_row_hash THEN
+                UPDATE SET {update_set}
+            WHEN NOT MATCHED THEN
+                INSERT ({insert_columns})
+                VALUES ({insert_values});
+        """)

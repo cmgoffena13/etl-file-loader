@@ -229,7 +229,7 @@ class PipelineRunner:
                     )
                 self._log_update(self.log)
             finally:
-                pass
+                self.cleanup()
             return self.result
 
     def __del__(self):
