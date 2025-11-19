@@ -16,6 +16,8 @@ from src.pipeline.db_utils import (
     db_create_stage_table,
     db_start_log,
 )
+from src.pipeline.publish.base import BasePublisher
+from src.pipeline.publish.factory import PublisherFactory
 from src.pipeline.read.base import BaseReader
 from src.pipeline.read.factory import ReaderFactory
 from src.pipeline.validate.validator import Validator
@@ -77,6 +79,13 @@ class PipelineRunner:
             self.engine,
             self.stage_table_name,
             self.log.id,
+        )
+        self.publisher: BasePublisher = PublisherFactory.create_publisher(
+            self.source,
+            self.engine,
+            self.log.id,
+            self.stage_table_name,
+            self.writer.rows_written_to_stage,
         )
 
     @retry()
@@ -142,6 +151,8 @@ class PipelineRunner:
         self.log.write_started_at = pendulum.now("UTC")
 
         self.writer.write(batches, self.stage_table_name)
+        # update publisher with the actual number of rows written to stage
+        self.publisher.rows_written_to_stage = self.writer.rows_written_to_stage
 
         self.log.write_ended_at = pendulum.now("UTC")
         self.log.records_written_to_stage = self.writer.rows_written_to_stage
@@ -157,7 +168,15 @@ class PipelineRunner:
         self._log_update(self.log)
 
     def publish_data(self) -> None:
-        pass
+        self.log.publish_started_at = pendulum.now("UTC")
+
+        self.publisher.publish_data()
+
+        self.log.publish_ended_at = pendulum.now("UTC")
+        self.log.publish_success = True
+        self.log.publish_inserts = self.publisher.publish_inserts
+        self.log.publish_updates = self.publisher.publish_updates
+        self._log_update(self.log)
 
     def cleanup(self) -> None:
         pass

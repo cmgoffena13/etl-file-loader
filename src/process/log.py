@@ -38,7 +38,7 @@ class FileLoadLog(BaseModel):
     records_read: Optional[int] = None
     validation_errors: Optional[int] = None
     records_written_to_stage: Optional[int] = None
-    target_inserts: Optional[int] = None
-    target_updates: Optional[int] = None
+    publish_inserts: Optional[int] = None
+    publish_updates: Optional[int] = None
     success: Optional[bool] = None
     error_type: Optional[str] = None

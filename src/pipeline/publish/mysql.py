@@ -5,8 +5,17 @@ from src.sources.base import DataSource
 
 
 class MySQLPublisher(BasePublisher):
-    def __init__(self, source: DataSource, engine: Engine, log_id: int):
-        super().__init__(source, engine, log_id)
+    def __init__(
+        self,
+        source: DataSource,
+        engine: Engine,
+        log_id: int,
+        stage_table_name: str,
+        rows_written_to_stage: int,
+    ):
+        super().__init__(
+            source, engine, log_id, stage_table_name, rows_written_to_stage
+        )
 
     def create_publish_sql(self):
         pass

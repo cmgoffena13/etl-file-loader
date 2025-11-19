@@ -1,3 +1,5 @@
+from sqlalchemy import Engine
+
 from src.pipeline.publish.base import BasePublisher
 from src.pipeline.publish.mssql import SQLServerPublisher
 from src.pipeline.publish.mysql import MySQLPublisher
@@ -16,7 +18,24 @@ class PublisherFactory:
     }
 
     @classmethod
+    def get_supported_extensions(cls) -> list[str]:
+        return list[str](cls._publishers.keys())
+
+    @classmethod
     def create_publisher(
-        cls, source: DataSource, engine: Engine, log_id: int
+        cls,
+        source: DataSource,
+        engine: Engine,
+        log_id: int,
+        stage_table_name: str,
+        rows_written_to_stage: int,
     ) -> BasePublisher:
-        return cls._publishers[config.DRIVERNAME](source, engine, log_id)
+        try:
+            publisher_class = cls._publishers[config.DRIVERNAME]
+        except KeyError:
+            raise ValueError(
+                f"Unsupported database driver for publisher: {config.DRIVERNAME}. Supported drivers: {cls.get_supported_extensions()}"
+            )
+        return publisher_class(
+            source, engine, log_id, stage_table_name, rows_written_to_stage
+        )
