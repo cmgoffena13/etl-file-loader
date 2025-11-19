@@ -79,7 +79,9 @@ class Auditor:
 
     def audit_data(self):
         if self.audit_query is None:
-            logger.warning(f"No audit query found for source {self.source.table_name}")
+            logger.warning(
+                f"[log_id={self.log_id}] No audit query found for source {self.source.table_name}"
+            )
             return
 
         with self.Session() as session:

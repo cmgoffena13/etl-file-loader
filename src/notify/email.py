@@ -26,13 +26,13 @@ class EmailNotifier(BaseNotifier):
         self.exception = exception
         self.recipient_emails = recipient_emails
         self.log_id = log_id
-        self.email_message = self._create_email_message()
+        self.email_message = self._create_message()
         self.additional_details = additional_details
 
     def _format_email_message(self, **kwargs: Any) -> str:
         return self.exception.email_message.format(**kwargs)
 
-    def _create_email_message(self) -> str:
+    def _create_message(self) -> str:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = (
             f"FileLoader Failed: {self.source_filename} - {self.exception.error_type}"

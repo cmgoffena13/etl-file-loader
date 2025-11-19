@@ -182,7 +182,9 @@ class PipelineRunner:
         pass
 
     def run(self) -> tuple[bool, str, Optional[str]]:
-        with tracer.start_as_current_span(f"FILE: {self.source_filename}") as span:
+        with tracer.start_as_current_span(
+            f"[log_id={self.log.id}] {self.source_filename}"
+        ):
             try:
                 self.check_if_processed()
                 self.archive_file()

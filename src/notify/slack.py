@@ -32,9 +32,9 @@ class SlackNotifier(BaseNotifier):
         self.title = title
         self.message = message
         self.details = details
-        self.slack_message = self._create_slack_message()
+        self.slack_message = self._create_message()
 
-    def _create_slack_message(self) -> str:
+    def _create_message(self) -> str:
         timestamp = pendulum.now("UTC").format("YYYY-MM-DD HH:mm:ss z")
 
         formatted_message = [
