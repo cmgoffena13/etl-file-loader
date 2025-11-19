@@ -114,7 +114,7 @@ class Validator:
                 self.records_validated += 1
                 if batch_index == self.batch_size:
                     yield batch_results
-                    batch_results = [None] * self.batch_size
+                    batch_results[:] = [None] * self.batch_size
                     batch_index = 0
             if batch_index > 0:
                 yield batch_results[:batch_index]

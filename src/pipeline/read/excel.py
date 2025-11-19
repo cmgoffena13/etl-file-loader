@@ -119,7 +119,7 @@ class ExcelReader(BaseReader):
 
             if batch_index == self.batch_size:
                 yield batch
-                batch = [None] * self.batch_size
+                batch[:] = [None] * self.batch_size
                 batch_index = 0
 
         if batch_index > 0:

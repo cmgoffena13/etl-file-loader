@@ -53,7 +53,7 @@ class BaseWriter(ABC):
                                 session.execute(sql_insert_template, valid_records)
                                 session.commit()
                                 self.rows_written_to_stage += len(valid_records)
-                                valid_records = [None] * self.batch_size
+                                valid_records[:] = [None] * self.batch_size
                                 valid_index = 0
                             except Exception as e:
                                 logger.exception(
@@ -87,7 +87,7 @@ class BaseWriter(ABC):
                         )
                         session.commit()
                         self.rows_written_to_stage += valid_index
-                        valid_records = [None] * self.batch_size
+                        valid_records[:] = [None] * self.batch_size
                         valid_index = 0
                     except Exception as e:
                         logger.exception(
