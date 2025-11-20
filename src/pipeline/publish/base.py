@@ -77,7 +77,7 @@ class BasePublisher(ABC):
     def create_publish_sql(self, now_iso: str):
         pass
 
-    def publish_data(self):
+    def publish(self):
         self.publish_inserts = self.get_insert_count()
         self.publish_updates = self.get_update_count()
 

@@ -102,3 +102,7 @@ class FileMoveError(Exception):
 
 class MultipleSourcesMatchError(Exception):
     pass
+
+
+class FileDeleteError(Exception):
+    pass

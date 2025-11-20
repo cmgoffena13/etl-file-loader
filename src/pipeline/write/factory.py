@@ -26,7 +26,12 @@ class WriterFactory:
 
     @classmethod
     def create_writer(
-        cls, source: DataSource, engine: Engine, file_load_dlq_table: Table, log_id: int
+        cls,
+        source: DataSource,
+        engine: Engine,
+        file_load_dlq_table: Table,
+        log_id: int,
+        stage_table_name: str,
     ) -> BaseWriter:
         try:
             writer_class = cls._writers[config.DRIVERNAME]
@@ -34,4 +39,6 @@ class WriterFactory:
             raise ValueError(
                 f"Unsupported database driver for writer: {config.DRIVERNAME}. Supported drivers: {cls.get_supported_extensions()}"
             )
-        return writer_class(source, engine, file_load_dlq_table, log_id)
+        return writer_class(
+            source, engine, file_load_dlq_table, log_id, stage_table_name
+        )

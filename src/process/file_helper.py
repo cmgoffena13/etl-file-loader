@@ -9,6 +9,7 @@ import pendulum
 from src.exception.exceptions import (
     DirectoryNotFoundError,
     FileCopyError,
+    FileDeleteError,
     FileMoveError,
 )
 from src.settings import config
@@ -52,3 +53,12 @@ class FileHelper:
             raise FileMoveError(
                 f"Failed to move file from {file_path} to {destination}: {e}"
             )
+
+    @classmethod
+    def delete_file(cls, file_path: Path) -> None:
+        try:
+            file_path.unlink()
+        except FileNotFoundError:
+            logger.debug(f"File {file_path} does not exist, skipping deletion")
+        except Exception as e:
+            raise FileDeleteError(f"Failed to delete file {file_path}: {e}")

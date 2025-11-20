@@ -8,10 +8,7 @@ from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exception.base import BaseFileErrorEmailException
-from src.exception.exceptions import (
-    DuplicateFileError,
-    ValidationThresholdExceededError,
-)
+from src.exception.exceptions import DuplicateFileError
 from src.notify.factory import NotifierFactory
 from src.pipeline.audit.auditor import Auditor
 from src.pipeline.db_utils import (
@@ -75,7 +72,11 @@ class PipelineRunner:
             self.file_path, self.source, self.reader.starting_row_number, self.log.id
         )
         self.writer: BaseWriter = WriterFactory.create_writer(
-            self.source, self.engine, self.file_load_dlq_table, self.log.id
+            self.source,
+            self.engine,
+            self.file_load_dlq_table,
+            self.log.id,
+            self.stage_table_name,
         )
         self.auditor: Auditor = Auditor(
             self.file_path,
@@ -155,7 +156,7 @@ class PipelineRunner:
     def write_data(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
         self.log.write_started_at = pendulum.now("UTC")
 
-        self.writer.write(batches, self.stage_table_name)
+        self.writer.write(batches)
 
         # update publisher with the actual number of rows written to stage
         self.publisher.rows_written_to_stage = self.writer.rows_written_to_stage
@@ -176,7 +177,7 @@ class PipelineRunner:
     def publish_data(self) -> None:
         self.log.publish_started_at = pendulum.now("UTC")
 
-        self.publisher.publish_data()
+        self.publisher.publish()
 
         self.log.publish_ended_at = pendulum.now("UTC")
         self.log.publish_success = True
@@ -186,6 +187,7 @@ class PipelineRunner:
 
     def cleanup(self) -> None:
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
+        FileHelper.delete_file(self.reader.file_path)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
         with tracer.start_as_current_span(

@@ -19,6 +19,7 @@ class BaseWriter(ABC):
         engine: Engine,
         file_load_dlq_table: Table,
         log_id: int,
+        stage_table_name: str,
     ):
         self.source: DataSource = source
         self.engine: Engine = engine
@@ -28,19 +29,16 @@ class BaseWriter(ABC):
         self.file_load_dlq_table: Table = file_load_dlq_table
         self.rows_written_to_stage: int = 0
         self.log_id: int = log_id
+        self.stage_table_name: str = stage_table_name
 
-    def create_stage_insert_sql(self, stage_table_name: str) -> str:
+    def create_stage_insert_sql(self) -> str:
         placeholders = ", ".join([f":{col}" for col in self.columns])
         return text(
-            f"INSERT INTO {stage_table_name} ({', '.join(self.columns)}) VALUES ({placeholders})"
+            f"INSERT INTO {self.stage_table_name} ({', '.join(self.columns)}) VALUES ({placeholders})"
         )
 
-    def write(
-        self,
-        batches: Iterator[tuple[bool, list[Dict[str, Any]]]],
-        stage_table_name: str,
-    ):
-        sql_insert_template = self.create_stage_insert_sql(stage_table_name)
+    def write(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
+        sql_insert_template = self.create_stage_insert_sql()
         valid_records = [None] * self.batch_size
         valid_index = 0
         invalid_records = []
@@ -63,7 +61,7 @@ class BaseWriter(ABC):
                                 valid_index = 0
                             except Exception as e:
                                 logger.exception(
-                                    f"Error inserting records into stage table {stage_table_name}: {e}"
+                                    f"Error inserting records into stage table {self.stage_table_name}: {e}"
                                 )
                                 session.rollback()
                                 raise e
@@ -89,18 +87,16 @@ class BaseWriter(ABC):
                 with self.Session() as session:
                     try:
                         logger.info(
-                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table {stage_table_name}"
+                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table {self.stage_table_name}"
                         )
                         session.execute(
                             sql_insert_template, valid_records[:valid_index]
                         )
                         session.commit()
                         self.rows_written_to_stage += valid_index
-                        valid_records[:] = [None] * self.batch_size
-                        valid_index = 0
                     except Exception as e:
                         logger.exception(
-                            f"Error inserting records into stage table {stage_table_name}: {e}"
+                            f"Error inserting records into stage table {self.stage_table_name}: {e}"
                         )
                         session.rollback()
                         raise e
@@ -111,7 +107,6 @@ class BaseWriter(ABC):
                         session.execute(stmt)
                         session.commit()
                         self.rows_written_to_stage += len(invalid_records)
-                        invalid_records.clear()
                     except Exception as e:
                         logger.exception(
                             f"Error inserting records into file load DLQ table: {e}"

@@ -11,5 +11,6 @@ class SQLiteWriter(BaseWriter):
         engine: Engine,
         file_load_dlq_table: Table,
         log_id: int,
+        stage_table_name: str,
     ):
-        super().__init__(source, engine, file_load_dlq_table, log_id)
+        super().__init__(source, engine, file_load_dlq_table, log_id, stage_table_name)
