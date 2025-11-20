@@ -34,8 +34,8 @@ class BasePublisher(ABC):
         self.stage_table_name: str = stage_table_name
         self.target_table_name: str = self.source.table_name
         self.rows_written_to_stage: int = rows_written_to_stage
-        self.publish_inserts: int = self.get_insert_count()
-        self.publish_updates: int = self.get_update_count()
+        self.publish_inserts: int = 0
+        self.publish_updates: int = 0
 
     def _insert_count_sql(self) -> str:
         return text(f"""
@@ -78,6 +78,9 @@ class BasePublisher(ABC):
         pass
 
     def publish_data(self):
+        self.publish_inserts = self.get_insert_count()
+        self.publish_updates = self.get_update_count()
+
         now_iso = pendulum.now("UTC").isoformat()
         with self.Session() as session:
             try:

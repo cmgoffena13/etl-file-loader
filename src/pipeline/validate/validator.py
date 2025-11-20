@@ -125,6 +125,7 @@ class Validator:
                 )
                 yield batch_results[:batch_index]
 
+    def check_validation_threshold(self) -> None:
         if self.records_validated > 0 and self.validation_errors > 0:
             error_rate = self.validation_errors / self.records_validated
             if error_rate > self.source.validation_error_threshold:

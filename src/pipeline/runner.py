@@ -8,12 +8,16 @@ from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exception.base import BaseFileErrorEmailException
-from src.exception.exceptions import DuplicateFileError
+from src.exception.exceptions import (
+    DuplicateFileError,
+    ValidationThresholdExceededError,
+)
 from src.notify.factory import NotifierFactory
 from src.pipeline.audit.auditor import Auditor
 from src.pipeline.db_utils import (
     db_check_if_duplicate_file,
     db_create_stage_table,
+    db_drop_stage_table,
     db_start_log,
 )
 from src.pipeline.publish.base import BasePublisher
@@ -48,9 +52,6 @@ class PipelineRunner:
         self.metadata: MetaData = metadata
         self.engine: Engine = engine
         self.Session: sessionmaker[Session] = sessionmaker(bind=self.engine)
-        self.stage_table_name: str = db_create_stage_table(
-            self.engine, self.metadata, self.source, self.source_filename
-        )
         self.file_load_log_table: Table = file_load_log_table
         self.file_load_dlq_table: Table = file_load_dlq_table
         self.result: Optional[tuple[bool, str]] = None
@@ -63,6 +64,9 @@ class PipelineRunner:
             self.file_load_log_table,
             self.log.source_filename,
             self.log.started_at,
+        )
+        self.stage_table_name: str = db_create_stage_table(
+            self.engine, self.metadata, self.source, self.source_filename, self.log.id
         )
         self.reader: BaseReader = ReaderFactory.create_reader(
             self.file_path, self.source, self.log.id
@@ -142,8 +146,9 @@ class PipelineRunner:
 
         yield from self.validator.validate(batches)
 
-        self.log.validate_ended_at = pendulum.now("UTC")
         self.log.validation_errors = self.validator.validation_errors
+        self.validator.check_validation_threshold()
+        self.log.validate_ended_at = pendulum.now("UTC")
         self.log.validate_success = True
         self._log_update(self.log)
 
@@ -151,6 +156,7 @@ class PipelineRunner:
         self.log.write_started_at = pendulum.now("UTC")
 
         self.writer.write(batches, self.stage_table_name)
+
         # update publisher with the actual number of rows written to stage
         self.publisher.rows_written_to_stage = self.writer.rows_written_to_stage
 
@@ -179,7 +185,7 @@ class PipelineRunner:
         self._log_update(self.log)
 
     def cleanup(self) -> None:
-        pass
+        db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
         with tracer.start_as_current_span(
@@ -195,9 +201,7 @@ class PipelineRunner:
                 self.log.ended_at = pendulum.now("UTC")
                 self.log.success = True
                 self.result = (True, self.source_filename, None)
-                self._log_update(self.log)
             except Exception as e:
-                self.log.ended_at = pendulum.now("UTC")
                 self.log.success = None if isinstance(e, DuplicateFileError) else False
                 self.log.error_type = type(e).__name__
                 if isinstance(e, BaseFileErrorEmailException):
@@ -212,11 +216,12 @@ class PipelineRunner:
                             **error_values,
                         )
                         email_notifier.notify()
+                    # Success since email notification was sent
                     self.result = (
                         True,
                         self.source_filename,
                         None,
-                    )  # Success since email notification was sent
+                    )
                 else:
                     error_location = get_error_location(e)
                     logger.exception(
@@ -227,9 +232,9 @@ class PipelineRunner:
                         self.source_filename,
                         f"{str(e)} at {error_location}",
                     )
-                self._log_update(self.log)
             finally:
                 self.cleanup()
+                self._log_update(self.log)
             return self.result
 
     def __del__(self):

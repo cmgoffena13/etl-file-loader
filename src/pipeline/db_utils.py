@@ -34,7 +34,8 @@ from sqlalchemy import (
 from sqlalchemy import Date as SQLDate
 from sqlalchemy import DateTime as SQLDateTime
 from sqlalchemy.dialects import mssql
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.mysql import BINARY
+from sqlalchemy.dialects.postgresql import BYTEA, JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -80,14 +81,34 @@ def _get_timezone_aware_datetime_type():
         "sqlite": SQLDateTime(timezone=True),  # TEXT, timezone stored in value
     }
 
-    for dialect_key, datetime_type in datetime_type_mapping.items():
-        if dialect_key == drivername:
-            return datetime_type
+    try:
+        datetime_type = datetime_type_mapping[drivername]
+    except KeyError:
+        logger.warning(
+            f"Unknown database dialect '{drivername}', defaulting to DateTime(timezone=True)"
+        )
+        datetime_type = SQLDateTime(timezone=True)
+    return datetime_type
 
-    logger.warning(
-        f"Unknown database dialect '{drivername}', defaulting to DateTime(timezone=True)"
-    )
-    return SQLDateTime(timezone=True)
+
+def _get_fixed_binary_type(length: int = 16):
+    drivername = config.DRIVERNAME
+
+    binary_type_mapping = {
+        "postgresql": BYTEA,  # Variable-length, but efficient for small values
+        "mysql": BINARY(length),  # Fixed-length BINARY(n)
+        "mssql": mssql.BINARY(length),  # Fixed-length BINARY(n)
+        "sqlite": LargeBinary(length),  # BLOB with length hint
+    }
+
+    try:
+        binary_type = binary_type_mapping[drivername]
+    except KeyError:
+        logger.warning(
+            f"Unknown database dialect '{drivername}', defaulting to LargeBinary({length})"
+        )
+        binary_type = LargeBinary(length)
+    return binary_type
 
 
 def _get_column_type(field_type):
@@ -168,7 +189,7 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
 
     columns.extend(
         [
-            Column("etl_row_hash", LargeBinary(16), nullable=False),
+            Column("etl_row_hash", _get_fixed_binary_type(16), nullable=False),
             Column("source_filename", String(255), nullable=False),
             Column("file_load_log_id", id_column_type, nullable=False),
         ]
@@ -183,7 +204,11 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
 
 
 def db_create_stage_table(
-    engine: Engine, metadata: MetaData, source: DataSource, source_filename: str
+    engine: Engine,
+    metadata: MetaData,
+    source: DataSource,
+    source_filename: str,
+    log_id: int,
 ) -> str:
     sanitized_name = sanitize_table_name(source_filename)
     stage_table_name = f"stage_{sanitized_name}"
@@ -193,7 +218,26 @@ def db_create_stage_table(
     stage_table = Table(stage_table_name, metadata, *columns)
     metadata.drop_all(engine, tables=[stage_table])
     metadata.create_all(engine, tables=[stage_table])
+    logger.info(f"[log_id={log_id}] Created stage table {stage_table_name}")
     return stage_table_name
+
+
+@retry()
+def db_drop_stage_table(
+    stage_table_name: str, Session: sessionmaker[Session], log_id: int
+):
+    with Session() as session:
+        try:
+            drop_sql = text(f"DROP TABLE IF EXISTS {stage_table_name}")
+            session.execute(drop_sql)
+            session.commit()
+            logger.info(f"[log_id={log_id}] Dropped stage table {stage_table_name}")
+        except Exception as e:
+            logger.exception(
+                f"[log_id={log_id}] Error dropping stage table {stage_table_name}: {e}"
+            )
+            session.rollback()
+            raise e
 
 
 @retry()
@@ -242,7 +286,7 @@ def db_create_row_hash(
         string_items[key] for key in sorted_keys if key in string_items
     )
 
-    return xxhash.xxh32(data_string.encode("utf-8")).digest()
+    return xxhash.xxh128(data_string.encode("utf-8")).digest()
 
 
 def db_get_column_names(source: DataSource) -> list[str]:
