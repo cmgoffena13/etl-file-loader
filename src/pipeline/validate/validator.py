@@ -91,7 +91,7 @@ class Validator:
                         e.errors() if hasattr(e, "errors") else [{"msg": str(e)}]
                     )
                     failed_field_names = extract_failed_field_names(
-                        e, self.source.grain
+                        error_details, self.source.grain
                     )
                     file_row_number = total_records - self.starting_row_number + 1
                     dlq_record = self._create_dlq_record(

@@ -34,7 +34,7 @@ def rename_keys_and_filter_record(
 
 
 def extract_failed_field_names(validation_error: Any, grain: list[str]) -> set[str]:
-    failed_field_names = set()
+    failed_field_names = set(grain)
     if isinstance(validation_error, list):
         for error in validation_error:
             if isinstance(error, dict) and error.get("loc"):
@@ -51,8 +51,6 @@ def extract_failed_field_names(validation_error: Any, grain: list[str]) -> set[s
             )
             if field_name:
                 failed_field_names.add(field_name)
-    # Include grain fields for record identification
-    failed_field_names.update(grain)
     return failed_field_names
 
 
