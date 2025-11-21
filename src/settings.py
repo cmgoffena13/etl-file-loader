@@ -64,6 +64,7 @@ class GlobalConfig(BaseConfig):
     OPEN_TELEMETRY_LOG_ENDPOINT: Optional[str] = None
     OPEN_TELEMETRY_TRACE_ENDPOINT: Optional[str] = None
     OPEN_TELEMETRY_AUTHORIZATION_TOKEN: Optional[str] = None
+    OPEN_TELEMETRY_FLAG: bool = False
 
     SQL_SERVER_SQLBULKCOPY_FLAG: bool = False
 
@@ -92,6 +93,7 @@ class TestConfig(GlobalConfig):
 class ProdConfig(GlobalConfig):
     LOG_LEVEL: Optional[str] = "WARNING"
     OTEL_PYTHON_LOG_CORRELATION: bool = True
+    OPEN_TELEMETRY_FLAG: bool = True
 
     model_config = SettingsConfigDict(env_prefix="PROD_")
 

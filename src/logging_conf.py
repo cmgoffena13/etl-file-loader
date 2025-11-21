@@ -21,7 +21,7 @@ def setup_logging():
     logger_provider = LoggerProvider()
     set_logger_provider(logger_provider)
 
-    if isinstance(config, ProdConfig):
+    if config.OPEN_TELEMETRY_FLAG:
         # Setup OpenTelemetry tracing exporter
         trace_exporter = OTLPSpanExporter(
             endpoint=config.OPEN_TELEMETRY_TRACE_ENDPOINT,
