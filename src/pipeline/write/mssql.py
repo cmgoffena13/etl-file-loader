@@ -246,9 +246,9 @@ class SQLServerWriter(BaseWriter):
 
         valid_batch = [None] * self.batch_size
         valid_index = 0
+        valid_column_order = None
         invalid_batch = []
         invalid_count = 0
-        valid_column_order = None
         invalid_column_order = None
         try:
             conn.Open()
@@ -259,7 +259,6 @@ class SQLServerWriter(BaseWriter):
                             self._initialize_datatable_columns(
                                 record, valid_dt, dotnet_types
                             )
-                            # Store column order for efficient row addition
                             valid_column_order = [
                                 col.ColumnName for col in valid_dt.Columns
                             ]
@@ -278,16 +277,15 @@ class SQLServerWriter(BaseWriter):
                                 f"[log_id={self.log_id}] Writing batch of {valid_index} rows to stage table {self.stage_table_name}"
                             )
                             valid_batch[:] = [None] * self.batch_size
-                            valid_index = 0
                             valid_bulk_copy.WriteToServer(valid_dt)
                             self.rows_written_to_stage += valid_index
+                            valid_index = 0
                             valid_dt.Clear()
                     else:
                         if invalid_dt.Columns.Count == 0:
                             self._initialize_datatable_columns(
                                 record, invalid_dt, dotnet_types
                             )
-                            # Store column order for efficient row addition
                             invalid_column_order = [
                                 col.ColumnName for col in invalid_dt.Columns
                             ]
@@ -306,16 +304,16 @@ class SQLServerWriter(BaseWriter):
                                 f"[log_id={self.log_id}] Writing batch of {invalid_count} rows to dlq table {self.file_load_dlq_table_name}"
                             )
                             invalid_batch.clear()
-                            invalid_count = 0
                             invalid_bulk_copy.WriteToServer(invalid_dt)
                             self.rows_written_to_stage += invalid_count
+                            invalid_count = 0
                             invalid_dt.Clear()
                 if (
                     self.rows_written_to_stage % 100000 == 0
                     or self.rows_written_to_stage < 100000
-                ):
+                ) and self.rows_written_to_stage > 0:
                     logger.info(
-                        f"[log_id={self.log_id}] Rows written to stage or dlq table: {self.rows_written_to_stage}"
+                        f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
                     )
 
             # Write final batches

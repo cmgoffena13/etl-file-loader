@@ -84,6 +84,9 @@ class BasePublisher(ABC):
         now_iso = pendulum.now("UTC").isoformat()
         with self.Session() as session:
             try:
+                logger.info(
+                    f"[log_id={self.log_id}] Publishing {self.stage_table_name} to {self.target_table_name}"
+                )
                 session.execute(self.create_publish_sql(now_iso))
                 session.commit()
             except Exception as e:

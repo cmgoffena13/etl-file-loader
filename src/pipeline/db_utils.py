@@ -29,6 +29,7 @@ from sqlalchemy import (
     Table,
     Text,
     insert,
+    select,
     text,
 )
 from sqlalchemy import Date as SQLDate
@@ -373,3 +374,23 @@ def db_create_duplicate_grain_examples_sql(source: DataSource, limit: int = 5) -
     {bottom_clause}
     """
     return duplicate_sql
+
+
+def db_delete_dlq_records_if_reprocessing(
+    Session: sessionmaker[Session],
+    file_load_dlq_table: Table,
+    source_filename: str,
+    log_id: int,
+):
+    with Session() as session:
+        existing_dlq = session.execute(
+            select(file_load_dlq_table.c.id)
+            .where(
+                file_load_dlq_table.c.source_filename == source_filename,
+                file_load_dlq_table.c.file_load_log_id < log_id,
+            )
+            .limit(1)
+        ).first()
+
+        if existing_dlq:
+            pass

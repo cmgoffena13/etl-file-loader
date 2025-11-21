@@ -71,7 +71,9 @@ class Auditor:
         grain_sql = db_create_grain_validation_sql(self.source)
         grain_sql = grain_sql.format(table=self.stage_table_name)
         with self.Session() as session:
-            logger.info(f"[log_id={self.log_id}] Auditing grain")
+            logger.info(
+                f"[log_id={self.log_id}] Auditing grain for table {self.stage_table_name}"
+            )
             result = session.execute(text(grain_sql)).fetchone()
             if result._mapping["grain_unique"] == 0:
                 duplicate_examples = self._get_duplicate_grain_examples()
@@ -85,7 +87,9 @@ class Auditor:
             return
 
         with self.Session() as session:
-            logger.info(f"[log_id={self.log_id}] Auditing data")
+            logger.info(
+                f"[log_id={self.log_id}] Auditing data for table {self.stage_table_name}"
+            )
             audit_sql = text(
                 self.audit_query.format(table=self.stage_table_name).strip()
             )
@@ -97,7 +101,9 @@ class Auditor:
                 self.failed_audits.append(audit_name)
         if self.failed_audits:
             failed_audits_formatted = ", ".join(self.failed_audits)
-            logger.error(f"[log_id={self.log_id}] Audit failed")
+            logger.error(
+                f"[log_id={self.log_id}] Audit failed for table {self.stage_table_name}"
+            )
             raise AuditFailedError(
                 error_values={
                     "source_filename": self.source_filename,

@@ -51,7 +51,7 @@ class BaseWriter(ABC):
                         with self.Session() as session:
                             try:
                                 logger.debug(
-                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table {stage_table_name}"
+                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table {self.stage_table_name}"
                                 )
                                 session.execute(sql_insert_template, valid_records)
                                 session.commit()
@@ -83,6 +83,13 @@ class BaseWriter(ABC):
                                 )
                                 session.rollback()
                                 raise e
+            if (
+                self.rows_written_to_stage % 100000 == 0
+                or self.rows_written_to_stage < 100000
+            ) and self.rows_written_to_stage > 0:
+                logger.info(
+                    f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
+                )
             if valid_index > 0:
                 with self.Session() as session:
                     try:

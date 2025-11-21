@@ -20,6 +20,8 @@ from src.pipeline.db_utils import (
     db_drop_stage_table,
     db_start_log,
 )
+from src.pipeline.delete.base import BaseDeleter
+from src.pipeline.delete.factory import DeleterFactory
 from src.pipeline.publish.base import BasePublisher
 from src.pipeline.publish.factory import PublisherFactory
 from src.pipeline.read.base import BaseReader
@@ -94,6 +96,12 @@ class PipelineRunner:
             self.log.id,
             self.stage_table_name,
             self.writer.rows_written_to_stage,
+        )
+        self.deleter: BaseDeleter = DeleterFactory.create_deleter(
+            self.source_filename,
+            self.engine,
+            self.log.id,
+            self.file_load_dlq_table,
         )
 
     @retry()
@@ -187,6 +195,9 @@ class PipelineRunner:
         self.log.publish_updates = self.publisher.publish_updates
         self._log_update(self.log)
 
+    def cleanup_dlq_records(self) -> None:
+        self.deleter.delete()
+
     def cleanup(self) -> None:
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
         FileHelper.delete_file(self.reader.file_path)
@@ -201,6 +212,7 @@ class PipelineRunner:
                 self.write_data(self.validate_data(self.read_data()))
                 self.audit_data()
                 self.publish_data()
+                self.cleanup_dlq_records()
                 self.cleanup()
                 self.log.ended_at = pendulum.now("UTC")
                 self.log.success = True
@@ -239,6 +251,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
+                logger.info(f"[log_id={self.log.id}] Finally block executed")
                 self.cleanup()
                 self._log_update(self.log)
             return self.result
