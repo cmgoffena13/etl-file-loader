@@ -7,7 +7,7 @@ import pendulum
 import pyexcel
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 
-from src.exception.exceptions import MissingHeaderError
+from src.exception.exceptions import MissingHeaderError, NoDataInFileError
 from src.pipeline.read.base import BaseReader
 from src.sources.base import DataSource, ExcelSource
 
@@ -90,7 +90,8 @@ class ExcelReader(BaseReader):
         try:
             first_record = next(records)
         except StopIteration:
-            raise ValueError(f"No data found in Excel file: {self.file_path}")
+            logger.error(f"No data found in Excel file: {self.file_path}")
+            raise NoDataInFileError(f"No data found in Excel file: {self.file_path}")
 
         actual_headers = set(first_record.keys())
 
@@ -107,6 +108,7 @@ class ExcelReader(BaseReader):
         )
 
         if no_valid_headers or all_default_names:
+            logger.error(f"No header found in file: {self.file_path.name}")
             raise MissingHeaderError(
                 error_values={"source_filename": self.file_path.name}
             )

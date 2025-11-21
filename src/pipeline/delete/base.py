@@ -29,7 +29,7 @@ class BaseDeleter(ABC):
     def create_delete_sql(self) -> str:
         pass
 
-    @retry
+    @retry()
     def _check_if_dlq_records_exist(self) -> bool:
         with self.Session() as session:
             return session.execute(
@@ -41,7 +41,7 @@ class BaseDeleter(ABC):
                 .limit(1)
             ).first()
 
-    @retry
+    @retry()
     def _batch_delete_dlq_records(self):
         with self.Session() as session:
             delete_sql = self.create_delete_sql()

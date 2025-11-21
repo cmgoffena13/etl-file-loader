@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Iterator
@@ -5,6 +6,8 @@ from typing import Any, Dict, Iterator
 from src.exception.exceptions import MissingColumnsError
 from src.settings import config
 from src.sources.base import DataSource
+
+logger = logging.getLogger(__name__)
 
 
 class BaseReader(ABC):
@@ -31,6 +34,7 @@ class BaseReader(ABC):
         if missing_fields:
             required_fields_display = sorted(required_file_fields)
             missing_fields_display = sorted(missing_fields)
+            logger.error(f"Missing columns: {missing_fields_display}")
             raise MissingColumnsError(
                 error_values={
                     "source_filename": self.file_path.name,

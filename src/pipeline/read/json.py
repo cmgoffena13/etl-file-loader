@@ -89,6 +89,7 @@ class JSONReader(BaseReader):
             if isinstance(first_obj, list) and first_obj:
                 first_item = first_obj[0]
             elif isinstance(first_obj, list):
+                logger.error(f"No data found in JSON file: {self.file_path}")
                 raise NoDataInFileError(
                     error_values={"source_filename": self.file_path.name}
                 )

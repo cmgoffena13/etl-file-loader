@@ -217,6 +217,7 @@ class PipelineRunner:
                 self.log.ended_at = pendulum.now("UTC")
                 self.log.success = True
                 self.result = (True, self.source_filename, None)
+                logger.info(f"[log_id={self.log.id}] Pipeline completed successfully")
             except Exception as e:
                 self.log.success = None if isinstance(e, DuplicateFileError) else False
                 self.log.error_type = type(e).__name__
@@ -251,7 +252,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
-                logger.info(f"[log_id={self.log.id}] Finally block executed")
+                logger.info(f"[log_id={self.log.id}] Fall back cleanup executed")
                 self.cleanup()
                 self._log_update(self.log)
             return self.result

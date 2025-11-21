@@ -43,6 +43,7 @@ class CSVReader(BaseReader):
             reader = csv.DictReader(csvfile, delimiter=self.delimiter)
 
             if not reader.fieldnames:
+                logger.error(f"No header found in file: {self.file_path.name}")
                 raise MissingHeaderError(
                     error_values={"source_filename": self.file_path.name}
                 )
@@ -50,6 +51,7 @@ class CSVReader(BaseReader):
             if not any(
                 fieldname and fieldname.strip() for fieldname in reader.fieldnames
             ):
+                logger.error(f"No header found in file: {self.file_path.name}")
                 raise MissingHeaderError(
                     error_values={"source_filename": self.file_path.name}
                 )

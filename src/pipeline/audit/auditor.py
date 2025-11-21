@@ -35,12 +35,10 @@ class Auditor:
         self.failed_audits: list[str] = []
         self.log_id: int = log_id
 
-    @retry
-    def _get_duplicate_grain_examples(self):
+    def _get_duplicate_grain_examples(self, session: Session):
         duplicate_sql = db_create_duplicate_grain_examples_sql(self.source)
         duplicate_sql = duplicate_sql.format(table=self.stage_table_name)
-        with self.Session() as session:
-            return session.execute(text(duplicate_sql)).fetchall()
+        return session.execute(text(duplicate_sql)).fetchall()
 
     def _format_duplicate_examples(
         self, duplicate_examples: list[dict[str, Any]]
@@ -59,7 +57,9 @@ class Auditor:
             aliased_record["duplicate_count"] = record_dict["duplicate_count"]
             record_str = ", ".join(f"{k}: {v}" for k, v in aliased_record.items())
             duplicate_examples_formatted += f"  - {record_str}\n"
-        logger.error(f"[log_id={self.log_id}] Grain validation failed")
+        logger.error(
+            f"[log_id={self.log_id}] Grain validation failed for table {self.stage_table_name}"
+        )
         raise GrainValidationError(
             error_values={
                 "source_filename": self.source_filename,
@@ -69,20 +69,20 @@ class Auditor:
             }
         )
 
-    @retry
+    @retry()
     def audit_grain(self):
+        logger.info(
+            f"[log_id={self.log_id}] Auditing grain for table {self.stage_table_name}"
+        )
         grain_sql = db_create_grain_validation_sql(self.source)
         grain_sql = grain_sql.format(table=self.stage_table_name)
         with self.Session() as session:
-            logger.info(
-                f"[log_id={self.log_id}] Auditing grain for table {self.stage_table_name}"
-            )
             result = session.execute(text(grain_sql)).fetchone()
             if result._mapping["grain_unique"] == 0:
-                duplicate_examples = self._get_duplicate_grain_examples()
+                duplicate_examples = self._get_duplicate_grain_examples(session)
                 self._format_duplicate_examples(duplicate_examples)
 
-    @retry
+    @retry()
     def audit_data(self):
         if self.audit_query is None:
             logger.warning(

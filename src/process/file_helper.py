@@ -59,6 +59,6 @@ class FileHelper:
         try:
             file_path.unlink()
         except FileNotFoundError:
-            logger.debug(f"File {file_path} does not exist, skipping deletion")
+            pass
         except Exception as e:
             raise FileDeleteError(f"Failed to delete file {file_path}: {e}")
