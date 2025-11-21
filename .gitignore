@@ -8,6 +8,10 @@ __pycache__/
 
 customers-2000000.csv
 
+# Profiling
+profile.html
+profile.json
+
 # Distribution / packaging
 .Python
 build/

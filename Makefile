@@ -38,3 +38,8 @@ dev-sqlserver-bulk: reset
 reset:
 	cp -R src/tests/test_archive/* src/tests/test_directory/
 	rm -rf src/tests/test_duplicate_files/*
+
+profile-sqlserver: reset
+	docker compose up -d sqlserver sqlserver-init
+	sleep 5
+	ENV_STATE=dev DEV_DATABASE_URL='mssql+pyodbc://sa:FileLoader123!@localhost:1433/fileloader?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes' DEV_SQL_SERVER_SQLBULKCOPY_FLAG=true uv run scalene main.py

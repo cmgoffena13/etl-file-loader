@@ -180,10 +180,13 @@ class SQLServerWriter(BaseWriter):
             else:
                 dt.Columns.Add(col)
 
-    def _add_record_to_datatable(self, record: Dict[str, Any], dt, dotnet_types):
-        """Add a single record to the DataTable."""
+    def _convert_value_to_dotnet(self, key: str, value: Any, dotnet_types) -> Any:
+        """Convert a Python value to the appropriate .NET type."""
         _, DBNull, _, _, _ = dotnet_types
         import System  # type: ignore[import-untyped]
+
+        if value is None:
+            return DBNull.Value
 
         column_types = {
             "etl_row_hash": System.Array[System.Byte],
@@ -191,24 +194,35 @@ class SQLServerWriter(BaseWriter):
             "file_row_number": System.Int32,
         }
 
-        dr = dt.NewRow()
-        for key, value in record.items():
-            if value is None:
-                dr[key] = DBNull.Value
-            elif key in column_types:
-                col_type = column_types[key]
-                if col_type == System.Array[System.Byte]:
-                    # etl_row_hash: convert Python bytes to .NET byte array
-                    dr[key] = System.Array[System.Byte](value)
-                elif col_type == System.Int64:
-                    dr[key] = System.Int64(value)
-                elif col_type == System.Int32:
-                    dr[key] = System.Int32(value)
-                else:
-                    dr[key] = value
-            else:
-                dr[key] = value
-        dt.Rows.Add(dr)
+        if key in column_types:
+            col_type = column_types[key]
+            if col_type == System.Array[System.Byte]:
+                # etl_row_hash: convert Python bytes to .NET byte array
+                return System.Array[System.Byte](value)
+            elif col_type == System.Int64:
+                return System.Int64(value)
+            elif col_type == System.Int32:
+                return System.Int32(value)
+
+        return value
+
+    def _add_batch_to_datatable(
+        self,
+        records: list[Dict[str, Any]],
+        dt,
+        dotnet_types,
+        column_order: list[str],
+    ):
+        """Add a batch of records to the DataTable using object arrays for better performance."""
+        dt.BeginLoadData()
+        for record in records:
+            # Convert values to .NET types in column order
+            values = [
+                self._convert_value_to_dotnet(key, record[key], dotnet_types)
+                for key in column_order
+            ]
+            dt.Rows.Add(values)
+        dt.EndLoadData()
 
     def bulk_write(
         self,
@@ -230,8 +244,12 @@ class SQLServerWriter(BaseWriter):
         invalid_bulk_copy = SqlBulkCopy(conn)
         invalid_bulk_copy.DestinationTableName = self.file_load_dlq_table_name
 
-        valid_count = 0
+        valid_batch = [None] * self.batch_size
+        valid_index = 0
+        invalid_batch = []
         invalid_count = 0
+        valid_column_order = None
+        invalid_column_order = None
         try:
             conn.Open()
             for batch in batches:
@@ -241,48 +259,85 @@ class SQLServerWriter(BaseWriter):
                             self._initialize_datatable_columns(
                                 record, valid_dt, dotnet_types
                             )
+                            # Store column order for efficient row addition
+                            valid_column_order = [
+                                col.ColumnName for col in valid_dt.Columns
+                            ]
 
-                        self._add_record_to_datatable(record, valid_dt, dotnet_types)
-                        valid_count += 1
+                        valid_batch[valid_index] = record
+                        valid_index += 1
 
-                        if valid_count == self.batch_size:
-                            logger.debug(
-                                f"[log_id={self.log_id}] Writing batch of {valid_count} rows to stage table {self.stage_table_name}"
+                        if valid_index == self.batch_size:
+                            self._add_batch_to_datatable(
+                                valid_batch[:valid_index],
+                                valid_dt,
+                                dotnet_types,
+                                valid_column_order,
                             )
+                            logger.debug(
+                                f"[log_id={self.log_id}] Writing batch of {valid_index} rows to stage table {self.stage_table_name}"
+                            )
+                            valid_batch[:] = [None] * self.batch_size
+                            valid_index = 0
                             valid_bulk_copy.WriteToServer(valid_dt)
-                            self.rows_written_to_stage += valid_count
+                            self.rows_written_to_stage += valid_index
                             valid_dt.Clear()
-                            valid_count = 0
                     else:
                         if invalid_dt.Columns.Count == 0:
                             self._initialize_datatable_columns(
                                 record, invalid_dt, dotnet_types
                             )
+                            # Store column order for efficient row addition
+                            invalid_column_order = [
+                                col.ColumnName for col in invalid_dt.Columns
+                            ]
 
-                        self._add_record_to_datatable(record, invalid_dt, dotnet_types)
+                        invalid_batch.append(record)
                         invalid_count += 1
 
                         if invalid_count == self.batch_size:
+                            self._add_batch_to_datatable(
+                                invalid_batch,
+                                invalid_dt,
+                                dotnet_types,
+                                invalid_column_order,
+                            )
                             logger.debug(
                                 f"[log_id={self.log_id}] Writing batch of {invalid_count} rows to dlq table {self.file_load_dlq_table_name}"
                             )
+                            invalid_batch.clear()
+                            invalid_count = 0
                             invalid_bulk_copy.WriteToServer(invalid_dt)
                             self.rows_written_to_stage += invalid_count
                             invalid_dt.Clear()
-                            invalid_count = 0
+                if (
+                    self.rows_written_to_stage % 100000 == 0
+                    or self.rows_written_to_stage < 100000
+                ):
+                    logger.info(
+                        f"[log_id={self.log_id}] Rows written to stage or dlq table: {self.rows_written_to_stage}"
+                    )
 
-            if valid_count > 0:
+            # Write final batches
+            if valid_batch:
+                valid_batch = valid_batch[:valid_index]
+                self._add_batch_to_datatable(
+                    valid_batch, valid_dt, dotnet_types, valid_column_order
+                )
                 logger.debug(
-                    f"[log_id={self.log_id}] Writing final batch of {valid_count} rows to stage table {self.stage_table_name}"
+                    f"[log_id={self.log_id}] Writing final batch of {len(valid_batch)} rows to stage table {self.stage_table_name}"
                 )
                 valid_bulk_copy.WriteToServer(valid_dt)
-                self.rows_written_to_stage += valid_count
-            if invalid_count > 0:
+                self.rows_written_to_stage += len(valid_batch)
+            if invalid_batch:
+                self._add_batch_to_datatable(
+                    invalid_batch, invalid_dt, dotnet_types, invalid_column_order
+                )
                 logger.debug(
-                    f"[log_id={self.log_id}] Writing final batch of {invalid_count} rows to dlq table {self.file_load_dlq_table_name}"
+                    f"[log_id={self.log_id}] Writing final batch of {len(invalid_batch)} rows to dlq table {self.file_load_dlq_table_name}"
                 )
                 invalid_bulk_copy.WriteToServer(invalid_dt)
-                self.rows_written_to_stage += invalid_count
+                self.rows_written_to_stage += len(invalid_batch)
         except BaseFileErrorEmailException:
             raise
         except Exception as e:
