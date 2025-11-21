@@ -3,31 +3,23 @@ import logging
 import re
 from decimal import Decimal
 from pathlib import Path
-from sqlite3 import register_adapter
 from typing import Any, Dict, Union, get_args, get_origin
 
-import pendulum
-import pymysql.converters
 import xxhash
 from annotated_types import MaxLen
 from pydantic import EmailStr
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Boolean,
     Column,
     Engine,
-    ForeignKey,
-    Index,
     Integer,
     LargeBinary,
     MetaData,
     Numeric,
-    PrimaryKeyConstraint,
     String,
     Table,
-    Text,
     insert,
     select,
     text,
@@ -36,7 +28,7 @@ from sqlalchemy import Date as SQLDate
 from sqlalchemy import DateTime as SQLDateTime
 from sqlalchemy.dialects import mssql
 from sqlalchemy.dialects.mysql import BINARY
-from sqlalchemy.dialects.postgresql import BYTEA, JSONB
+from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 

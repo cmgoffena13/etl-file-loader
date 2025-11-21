@@ -30,6 +30,18 @@ class BaseDeleter(ABC):
         pass
 
     @retry
+    def _check_if_dlq_records_exist(self) -> bool:
+        with self.Session() as session:
+            return session.execute(
+                select(self.file_load_dlq_table.c.id)
+                .where(
+                    self.file_load_dlq_table.c.source_filename == self.source_filename,
+                    self.file_load_dlq_table.c.file_load_log_id < self.log_id,
+                )
+                .limit(1)
+            ).first()
+
+    @retry
     def _batch_delete_dlq_records(self):
         with self.Session() as session:
             delete_sql = self.create_delete_sql()
@@ -59,15 +71,6 @@ class BaseDeleter(ABC):
                 raise
 
     def delete(self):
-        with self.Session() as session:
-            existing_dlq = session.execute(
-                select(self.file_load_dlq_table.c.id)
-                .where(
-                    self.file_load_dlq_table.c.source_filename == self.source_filename,
-                    self.file_load_dlq_table.c.file_load_log_id < self.log_id,
-                )
-                .limit(1)
-            ).first()
-
+        existing_dlq = self._check_if_dlq_records_exist()
         if existing_dlq:
             self._batch_delete_dlq_records()

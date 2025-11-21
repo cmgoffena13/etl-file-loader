@@ -12,6 +12,7 @@ from src.pipeline.db_utils import (
 )
 from src.pipeline.model_utils import get_field_alias
 from src.sources.base import DataSource
+from src.utils import retry
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class Auditor:
         self.failed_audits: list[str] = []
         self.log_id: int = log_id
 
+    @retry
     def _get_duplicate_grain_examples(self):
         duplicate_sql = db_create_duplicate_grain_examples_sql(self.source)
         duplicate_sql = duplicate_sql.format(table=self.stage_table_name)
@@ -67,6 +69,7 @@ class Auditor:
             }
         )
 
+    @retry
     def audit_grain(self):
         grain_sql = db_create_grain_validation_sql(self.source)
         grain_sql = grain_sql.format(table=self.stage_table_name)
@@ -79,6 +82,7 @@ class Auditor:
                 duplicate_examples = self._get_duplicate_grain_examples()
                 self._format_duplicate_examples(duplicate_examples)
 
+    @retry
     def audit_data(self):
         if self.audit_query is None:
             logger.warning(
