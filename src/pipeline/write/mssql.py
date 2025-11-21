@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from sqlalchemy import Engine, Table
 
+from src.exception.base import BaseFileErrorEmailException
 from src.pipeline.write.base import BaseWriter
 from src.settings import config
 from src.sources.base import DataSource
@@ -38,7 +39,7 @@ class SQLServerWriter(BaseWriter):
         self.batch_size = (
             config.BATCH_SIZE if config.SQL_SERVER_SQLBULKCOPY_FLAG else self.max_rows
         )
-        self.file_load_dlq_table_name = file_load_dlq_table.name
+        self.file_load_dlq_table_name = str(file_load_dlq_table.name)
 
     def _get_runtime_platform_identifier(self) -> str:
         """Determine the .NET runtime platform identifier.
@@ -263,6 +264,8 @@ class SQLServerWriter(BaseWriter):
             if invalid_count > 0:
                 invalid_bulk_copy.WriteToServer(invalid_dt)
                 self.rows_written_to_stage += invalid_count
+        except BaseFileErrorEmailException:
+            raise
         except Exception as e:
             logger.exception(
                 f"[log_id={self.log_id}] Failed to SqlBulkCopy insert into {self.stage_table_name}: {e}"

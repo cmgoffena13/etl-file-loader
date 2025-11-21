@@ -8,7 +8,10 @@ from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exception.base import BaseFileErrorEmailException
-from src.exception.exceptions import DuplicateFileError
+from src.exception.exceptions import (
+    DuplicateFileError,
+    ValidationThresholdExceededError,
+)
 from src.notify.factory import NotifierFactory
 from src.pipeline.audit.auditor import Auditor
 from src.pipeline.db_utils import (
@@ -148,7 +151,6 @@ class PipelineRunner:
         yield from self.validator.validate(batches)
 
         self.log.validation_errors = self.validator.validation_errors
-        self.validator.check_validation_threshold()
         self.log.validate_ended_at = pendulum.now("UTC")
         self.log.validate_success = True
         self._log_update(self.log)
@@ -207,6 +209,8 @@ class PipelineRunner:
                 self.log.success = None if isinstance(e, DuplicateFileError) else False
                 self.log.error_type = type(e).__name__
                 if isinstance(e, BaseFileErrorEmailException):
+                    if isinstance(e, ValidationThresholdExceededError):
+                        self.log.validation_errors = self.validator.validation_errors
                     if self.reader.source.notification_emails:
                         error_values = getattr(e, "error_values", {})
                         notifier = NotifierFactory.get_notifier("email")
