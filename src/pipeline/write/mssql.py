@@ -159,12 +159,10 @@ class SQLServerWriter(BaseWriter):
 
         return builder.ConnectionString
 
-    def _dicts_to_datatable(self, records: list[Dict[str, Any]]):
-        """Convert list of dicts to .NET DataTable."""
-        DataTable, DBNull, _, _, _ = self._ensure_clr_available()
+    def _initialize_datatable_columns(self, sample_record: Dict[str, Any], dt):
+        """Initialize DataTable columns from a sample record (only called once)."""
+        _, _, _, _, _ = self._ensure_clr_available()
         import System  # type: ignore[import-untyped]
-
-        dt = DataTable()
 
         column_types = {
             "etl_row_hash": System.Array[System.Byte],
@@ -172,75 +170,99 @@ class SQLServerWriter(BaseWriter):
             "file_row_number": System.Int32,
         }
 
-        for col in records[0].keys():
+        for col in sample_record.keys():
             if col in column_types:
                 column = System.Data.DataColumn(col, column_types[col])
                 dt.Columns.Add(column)
             else:
                 dt.Columns.Add(col)
 
-        for row in records:
-            dr = dt.NewRow()
-            for key, value in row.items():
-                if value is None:
-                    dr[key] = DBNull.Value
-                elif key in column_types:
-                    col_type = column_types[key]
-                    if col_type == System.Array[System.Byte]:
-                        # etl_row_hash: convert Python bytes to .NET byte array
-                        dr[key] = System.Array[System.Byte](value)
-                    elif col_type == System.Int64:
-                        dr[key] = System.Int64(value)
-                    elif col_type == System.Int32:
-                        dr[key] = System.Int32(value)
-                    else:
-                        dr[key] = value
+    def _add_record_to_datatable(self, record: Dict[str, Any], dt):
+        """Add a single record to the DataTable."""
+        _, DBNull, _, _, _ = self._ensure_clr_available()
+        import System  # type: ignore[import-untyped]
+
+        column_types = {
+            "etl_row_hash": System.Array[System.Byte],
+            "file_load_log_id": System.Int64,
+            "file_row_number": System.Int32,
+        }
+
+        dr = dt.NewRow()
+        for key, value in record.items():
+            if value is None:
+                dr[key] = DBNull.Value
+            elif key in column_types:
+                col_type = column_types[key]
+                if col_type == System.Array[System.Byte]:
+                    # etl_row_hash: convert Python bytes to .NET byte array
+                    dr[key] = System.Array[System.Byte](value)
+                elif col_type == System.Int64:
+                    dr[key] = System.Int64(value)
+                elif col_type == System.Int32:
+                    dr[key] = System.Int32(value)
                 else:
                     dr[key] = value
-            dt.Rows.Add(dr)
-        dt.TableName = self.stage_table_name
-        return dt
+            else:
+                dr[key] = value
+        dt.Rows.Add(dr)
 
     def bulk_write(
         self,
         batches: Iterator[tuple[bool, list[Dict[str, Any]]]],
     ) -> None:
         # DOTNET Setup and Connection
-        _, _, SqlBulkCopy, SqlConnection, _ = self._ensure_clr_available()
+        DataTable, _, SqlBulkCopy, SqlConnection, _ = self._ensure_clr_available()
         dotnet_conn_string = self._get_dotnet_conn_string()
         conn = SqlConnection(dotnet_conn_string)
+
+        valid_dt = DataTable()
+        valid_dt.TableName = self.stage_table_name
+        invalid_dt = DataTable()
+        invalid_dt.TableName = self.file_load_dlq_table_name
+
         valid_bulk_copy = SqlBulkCopy(conn)
         valid_bulk_copy.DestinationTableName = self.stage_table_name
         invalid_bulk_copy = SqlBulkCopy(conn)
         invalid_bulk_copy.DestinationTableName = self.file_load_dlq_table_name
 
-        valid_records = [None] * self.batch_size
-        valid_index = 0
-        invalid_records = []
+        valid_count = 0
+        invalid_count = 0
         try:
             conn.Open()
             for batch in batches:
                 for passed, record in batch:
                     if passed:
-                        valid_records[valid_index] = record
-                        valid_index += 1
-                        if valid_index == self.batch_size:
-                            dt = self._dicts_to_datatable(valid_records)
-                            valid_bulk_copy.WriteToServer(dt)
-                            valid_records[:] = [None] * self.batch_size
-                            valid_index = 0
+                        if valid_dt.Columns.Count == 0:
+                            self._initialize_datatable_columns(record, valid_dt)
+
+                        self._add_record_to_datatable(record, valid_dt)
+                        valid_count += 1
+
+                        if valid_count == self.batch_size:
+                            valid_bulk_copy.WriteToServer(valid_dt)
+                            self.rows_written_to_stage += valid_count
+                            valid_dt.Clear()
+                            valid_count = 0
                     else:
-                        invalid_records.append(record)
-                        if len(invalid_records) == self.batch_size:
-                            dt = self._dicts_to_datatable(invalid_records)
-                            invalid_bulk_copy.WriteToServer(dt)
-                            invalid_records.clear()
-                if valid_index > 0:
-                    dt = self._dicts_to_datatable(valid_records[:valid_index])
-                    valid_bulk_copy.WriteToServer(dt)
-                if invalid_records:
-                    dt = self._dicts_to_datatable(invalid_records)
-                    invalid_bulk_copy.WriteToServer(dt)
+                        if invalid_dt.Columns.Count == 0:
+                            self._initialize_datatable_columns(record, invalid_dt)
+
+                        self._add_record_to_datatable(record, invalid_dt)
+                        invalid_count += 1
+
+                        if invalid_count == self.batch_size:
+                            invalid_bulk_copy.WriteToServer(invalid_dt)
+                            self.rows_written_to_stage += invalid_count
+                            invalid_dt.Clear()
+                            invalid_count = 0
+
+            if valid_count > 0:
+                valid_bulk_copy.WriteToServer(valid_dt)
+                self.rows_written_to_stage += valid_count
+            if invalid_count > 0:
+                invalid_bulk_copy.WriteToServer(invalid_dt)
+                self.rows_written_to_stage += invalid_count
         except Exception as e:
             logger.exception(
                 f"[log_id={self.log_id}] Failed to SqlBulkCopy insert into {self.stage_table_name}: {e}"
