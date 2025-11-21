@@ -113,14 +113,14 @@ class Validator:
                 batch_index += 1
                 self.records_validated += 1
                 if batch_index == self.batch_size:
-                    logger.info(
+                    logger.debug(
                         f"[log_id={self.log_id}] Validated batch of {self.batch_size} rows"
                     )
                     yield batch_results
                     batch_results[:] = [None] * self.batch_size
                     batch_index = 0
             if batch_index > 0:
-                logger.info(
+                logger.debug(
                     f"[log_id={self.log_id}] Validated final batch of {batch_index} rows"
                 )
                 yield batch_results[:batch_index]

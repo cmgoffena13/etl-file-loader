@@ -50,7 +50,7 @@ class BaseWriter(ABC):
                     if valid_index == self.batch_size:
                         with self.Session() as session:
                             try:
-                                logger.info(
+                                logger.debug(
                                     f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table {stage_table_name}"
                                 )
                                 session.execute(sql_insert_template, valid_records)
@@ -86,7 +86,7 @@ class BaseWriter(ABC):
             if valid_index > 0:
                 with self.Session() as session:
                     try:
-                        logger.info(
+                        logger.debug(
                             f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table {self.stage_table_name}"
                         )
                         session.execute(

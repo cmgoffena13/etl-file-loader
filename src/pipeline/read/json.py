@@ -112,7 +112,7 @@ class JSONReader(BaseReader):
                     self.rows_read += 1
 
                     if batch_index == self.batch_size:
-                        logger.info(
+                        logger.debug(
                             f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
                         )
                         yield batch
@@ -120,7 +120,7 @@ class JSONReader(BaseReader):
                         batch_index = 0
 
             if batch_index > 0:
-                logger.info(
+                logger.debug(
                     f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
                 )
                 yield batch[:batch_index]

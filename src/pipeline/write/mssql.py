@@ -96,6 +96,7 @@ class SQLServerWriter(BaseWriter):
 
             from Microsoft.Data.SqlClient import (  # type: ignore[import-untyped]
                 SqlBulkCopy,
+                SqlBulkCopyOptions,
                 SqlConnection,
                 SqlConnectionStringBuilder,
             )
@@ -160,9 +161,10 @@ class SQLServerWriter(BaseWriter):
 
         return builder.ConnectionString
 
-    def _initialize_datatable_columns(self, sample_record: Dict[str, Any], dt):
+    def _initialize_datatable_columns(
+        self, sample_record: Dict[str, Any], dt, dotnet_types
+    ):
         """Initialize DataTable columns from a sample record (only called once)."""
-        _, _, _, _, _ = self._ensure_clr_available()
         import System  # type: ignore[import-untyped]
 
         column_types = {
@@ -178,9 +180,9 @@ class SQLServerWriter(BaseWriter):
             else:
                 dt.Columns.Add(col)
 
-    def _add_record_to_datatable(self, record: Dict[str, Any], dt):
+    def _add_record_to_datatable(self, record: Dict[str, Any], dt, dotnet_types):
         """Add a single record to the DataTable."""
-        _, DBNull, _, _, _ = self._ensure_clr_available()
+        _, DBNull, _, _, _ = dotnet_types
         import System  # type: ignore[import-untyped]
 
         column_types = {
@@ -212,18 +214,19 @@ class SQLServerWriter(BaseWriter):
         self,
         batches: Iterator[tuple[bool, list[Dict[str, Any]]]],
     ) -> None:
-        # DOTNET Setup and Connection
-        DataTable, _, SqlBulkCopy, SqlConnection, _ = self._ensure_clr_available()
+        # DOTNET Setup and Connection - get types once
+        dotnet_types = self._ensure_clr_available()
+        DataTable, _, SqlBulkCopy, SqlConnection, _ = dotnet_types
         dotnet_conn_string = self._get_dotnet_conn_string()
         conn = SqlConnection(dotnet_conn_string)
 
         valid_dt = DataTable()
         valid_dt.TableName = self.stage_table_name
-        invalid_dt = DataTable()
-        invalid_dt.TableName = self.file_load_dlq_table_name
-
         valid_bulk_copy = SqlBulkCopy(conn)
         valid_bulk_copy.DestinationTableName = self.stage_table_name
+
+        invalid_dt = DataTable()
+        invalid_dt.TableName = self.file_load_dlq_table_name
         invalid_bulk_copy = SqlBulkCopy(conn)
         invalid_bulk_copy.DestinationTableName = self.file_load_dlq_table_name
 
@@ -235,33 +238,49 @@ class SQLServerWriter(BaseWriter):
                 for passed, record in batch:
                     if passed:
                         if valid_dt.Columns.Count == 0:
-                            self._initialize_datatable_columns(record, valid_dt)
+                            self._initialize_datatable_columns(
+                                record, valid_dt, dotnet_types
+                            )
 
-                        self._add_record_to_datatable(record, valid_dt)
+                        self._add_record_to_datatable(record, valid_dt, dotnet_types)
                         valid_count += 1
 
                         if valid_count == self.batch_size:
+                            logger.debug(
+                                f"[log_id={self.log_id}] Writing batch of {valid_count} rows to stage table {self.stage_table_name}"
+                            )
                             valid_bulk_copy.WriteToServer(valid_dt)
                             self.rows_written_to_stage += valid_count
                             valid_dt.Clear()
                             valid_count = 0
                     else:
                         if invalid_dt.Columns.Count == 0:
-                            self._initialize_datatable_columns(record, invalid_dt)
+                            self._initialize_datatable_columns(
+                                record, invalid_dt, dotnet_types
+                            )
 
-                        self._add_record_to_datatable(record, invalid_dt)
+                        self._add_record_to_datatable(record, invalid_dt, dotnet_types)
                         invalid_count += 1
 
                         if invalid_count == self.batch_size:
+                            logger.debug(
+                                f"[log_id={self.log_id}] Writing batch of {invalid_count} rows to dlq table {self.file_load_dlq_table_name}"
+                            )
                             invalid_bulk_copy.WriteToServer(invalid_dt)
                             self.rows_written_to_stage += invalid_count
                             invalid_dt.Clear()
                             invalid_count = 0
 
             if valid_count > 0:
+                logger.debug(
+                    f"[log_id={self.log_id}] Writing final batch of {valid_count} rows to stage table {self.stage_table_name}"
+                )
                 valid_bulk_copy.WriteToServer(valid_dt)
                 self.rows_written_to_stage += valid_count
             if invalid_count > 0:
+                logger.debug(
+                    f"[log_id={self.log_id}] Writing final batch of {invalid_count} rows to dlq table {self.file_load_dlq_table_name}"
+                )
                 invalid_bulk_copy.WriteToServer(invalid_dt)
                 self.rows_written_to_stage += invalid_count
         except BaseFileErrorEmailException:
