@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import boto3
 import pendulum
+from botocore.exceptions import ClientError
 
 from src.exception.exceptions import (
     DirectoryNotFoundError,
@@ -69,8 +70,11 @@ class AWSFileHelper(BaseFileHelper):
                         filename = key.split("/")[-1]
                         if filename and not filename.startswith("."):
                             file_paths_queue.put(filename)
-        except s3_client.exceptions.NoSuchBucket:
-            raise DirectoryNotFoundError(f"S3 bucket not found: {bucket}")
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code == "NoSuchBucket":
+                raise DirectoryNotFoundError(f"S3 bucket not found: {bucket}")
+            raise
 
         return file_paths_queue
 

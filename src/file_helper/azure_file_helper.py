@@ -114,6 +114,8 @@ class AzureFileHelper(BaseFileHelper):
                 filename = blob_name.split("/")[-1]
                 if filename and not filename.startswith("."):
                     file_paths_queue.put(filename)
+        except ResourceNotFoundError as e:
+            raise DirectoryNotFoundError(f"Azure container not found: {container}: {e}")
         except Exception as e:
             raise DirectoryNotFoundError(
                 f"Failed to list blobs in container {container}: {e}"
