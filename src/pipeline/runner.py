@@ -255,9 +255,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
-                logger.info(f"[log_id={self.log.id}] Fall back cleanup executed")
-                self.cleanup()
-                self._log_update(self.log)
+                FileHelper.delete_file(self.reader.file_path)
             return self.result
 
     def __del__(self):

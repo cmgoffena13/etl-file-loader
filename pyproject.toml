@@ -37,5 +37,9 @@ dependencies = [
     "scalene>=1.5.55",
     "slack-sdk>=3.38.0",
     "sqlalchemy>=2.0.44",
+    "typer>=0.20.0",
     "xxhash>=3.6.0",
 ]
+
+[project.scripts]
+fileloader = "src.cli.main:main"

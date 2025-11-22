@@ -33,12 +33,13 @@ class Processor:
         self.file_load_dlq_table: Table = self.metadata.tables["file_load_dlq"]
         self.results: list[tuple[bool, str, Optional[str]]] = []
 
-    def process_file(self, file_path: Path):
+    def process_file(self, file_name: str):
+        file_path = config.DIRECTORY_PATH / file_name
         try:
             source = MASTER_REGISTRY.find_source_for_file(file_path)
         except Exception as e:
-            logger.exception(f"Error finding source for file {file_path.name}: {e}")
-            self.results.append((False, file_path.name, str(e)))
+            logger.exception(f"Error finding source for file {file_name}: {e}")
+            self.results.append((False, file_name, str(e)))
         if source is not None:
             runner = PipelineRunner(
                 file_path=file_path,
@@ -54,8 +55,8 @@ class Processor:
     def _worker(self, file_paths_queue: Queue):
         while True:
             try:
-                file_path = file_paths_queue.get_nowait()
-                self.process_file(file_path)
+                file_name = file_paths_queue.get_nowait()
+                self.process_file(file_name)
                 file_paths_queue.task_done()
             except Empty:
                 break

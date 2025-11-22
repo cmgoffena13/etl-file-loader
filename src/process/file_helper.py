@@ -26,7 +26,7 @@ class FileHelper:
         file_paths_queue = Queue()
         for entry in os.scandir(directory_path):
             if entry.is_file() and not entry.name.startswith("."):
-                file_paths_queue.put(Path(entry.path))
+                file_paths_queue.put(entry.name)
 
         return file_paths_queue
 
