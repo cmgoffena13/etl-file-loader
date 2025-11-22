@@ -3,24 +3,31 @@ import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, Union
 
 from src.exception.exceptions import MissingColumnsError
 from src.file_helper.base import BaseFileHelper
 from src.file_helper.factory import FileHelperFactory
 from src.settings import config
 from src.sources.base import DataSource
+from src.utils import get_file_name
 
 logger = logging.getLogger(__name__)
 
 
 class BaseReader(ABC):
-    def __init__(self, file_path: Path, source: DataSource, log_id: int):
-        self.file_path: Path = file_path
+    def __init__(self, file_path: Union[Path, str], source: DataSource, log_id: int):
+        self.file_path: Union[Path, str] = file_path
         self.source: DataSource = source
         self.log_id: int = log_id
+        self.source_filename: str = get_file_name(file_path)
+        if isinstance(file_path, str):
+            filename = file_path.split("/")[-1].split("?")[0].split("#")[0]
+            path_obj = Path(filename)
+        else:
+            path_obj = file_path
         self.is_gzipped: bool = (
-            len(file_path.suffixes) >= 2 and file_path.suffixes[-1].lower() == ".gz"
+            len(path_obj.suffixes) >= 2 and path_obj.suffixes[-1].lower() == ".gz"
         )
         self.batch_size: int = config.BATCH_SIZE
         self.rows_read: int = 0
@@ -48,7 +55,7 @@ class BaseReader(ABC):
             logger.error(f"Missing columns: {missing_fields_display}")
             raise MissingColumnsError(
                 error_values={
-                    "source_filename": self.file_path.name,
+                    "source_filename": self.source_filename,
                     "required_fields_display_formatted": ", ".join(
                         required_fields_display
                     ),

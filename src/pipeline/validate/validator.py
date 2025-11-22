@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, Union
 
 import pendulum
 from pydantic import TypeAdapter, ValidationError
@@ -17,13 +17,18 @@ from src.pipeline.model_utils import (
 )
 from src.settings import config
 from src.sources.base import DataSource
+from src.utils import get_file_name
 
 logger = logging.getLogger(__name__)
 
 
 class Validator:
     def __init__(
-        self, file_path: Path, source: DataSource, starting_row_number: int, log_id: int
+        self,
+        file_path: Union[Path, str],
+        source: DataSource,
+        starting_row_number: int,
+        log_id: int,
     ):
         self.source: DataSource = source
         self.field_mapping: Dict[str, str] = create_field_mapping(source)
@@ -35,7 +40,7 @@ class Validator:
         self.records_validated: int = 0
         self.validation_errors: int = 0
         self.starting_row_number: int = starting_row_number
-        self.source_filename: str = file_path.name
+        self.source_filename: str = get_file_name(file_path)
         self.batch_size: int = config.BATCH_SIZE
         self.sample_validation_errors: List[Dict[str, Any]] = []
         self.log_id: int = log_id

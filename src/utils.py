@@ -3,7 +3,7 @@ import os
 import time
 from functools import wraps
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from src.exception.base import BaseFileErrorEmailException
 from src.exception.exceptions import FileDeleteError
@@ -49,10 +49,29 @@ def get_error_location(exception: Exception) -> Optional[str]:
     return f"{filename}:{tb.tb_lineno}"
 
 
-def get_file_extension(file_path: Path) -> str:
-    suffixes = file_path.suffixes
+def get_file_name(file_path: Union[Path, str]) -> str:
+    """Extract filename from Path object or URI string."""
+    if isinstance(file_path, str):
+        # For URI strings (e.g., s3://bucket/path/file.csv.gz), extract just the filename
+        # Remove query parameters and fragments if present
+        path_part = file_path.split("?")[0].split("#")[0]
+        # Get the last part after the last slash
+        return path_part.split("/")[-1]
+    return file_path.name
+
+
+def get_file_extension(file_path: Union[Path, str]) -> str:
+    """Get file extension from Path object or URI string, handling .gz files."""
+    if isinstance(file_path, str):
+        path_part = file_path.split("?")[0].split("#")[0]
+        filename = path_part.split("/")[-1]
+        path_obj = Path(filename)
+    else:
+        path_obj = file_path
+
+    suffixes = path_obj.suffixes
 
     if len(suffixes) >= 2:
         return "".join(suffixes[-2:]).lower()
 
-    return file_path.suffix.lower()
+    return path_obj.suffix.lower()

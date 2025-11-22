@@ -4,7 +4,7 @@ import io
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, Union
 
 from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
@@ -18,7 +18,7 @@ class CSVReader(BaseReader):
 
     def __init__(
         self,
-        file_path: Path,
+        file_path: Union[Path, str],
         source: DataSource,
         log_id: int,
         delimiter: str,
@@ -49,17 +49,17 @@ class CSVReader(BaseReader):
             reader = csv.DictReader(csvfile, delimiter=self.delimiter)
 
             if not reader.fieldnames:
-                logger.error(f"No header found in file: {self.file_path.name}")
+                logger.error(f"No header found in file: {self.source_filename}")
                 raise MissingHeaderError(
-                    error_values={"source_filename": self.file_path.name}
+                    error_values={"source_filename": self.source_filename}
                 )
 
             if not any(
                 fieldname and fieldname.strip() for fieldname in reader.fieldnames
             ):
-                logger.error(f"No header found in file: {self.file_path.name}")
+                logger.error(f"No header found in file: {self.source_filename}")
                 raise MissingHeaderError(
-                    error_values={"source_filename": self.file_path.name}
+                    error_values={"source_filename": self.source_filename}
                 )
 
             self._validate_fields(set(reader.fieldnames))

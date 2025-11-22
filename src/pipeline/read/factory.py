@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Type
+from typing import Type, Union
 
 from src.pipeline.read.base import BaseReader
 from src.pipeline.read.csv import CSVReader
@@ -25,7 +25,7 @@ class ReaderFactory:
 
     @classmethod
     def create_reader(
-        cls, file_path: Path, source: Type[DataSource], log_id: int
+        cls, file_path: Union[Path, str], source: Type[DataSource], log_id: int
     ) -> Type[BaseReader]:
         extension = get_file_extension(file_path)
 

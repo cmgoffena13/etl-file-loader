@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 
 from sqlalchemy import Engine
 
@@ -26,7 +27,7 @@ class AuditorFactory:
     @classmethod
     def create_auditor(
         cls,
-        file_path: Path,
+        file_path: Union[Path, str],
         source: DataSource,
         engine: Engine,
         stage_table_name: str,

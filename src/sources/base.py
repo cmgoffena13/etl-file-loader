@@ -29,7 +29,13 @@ class DataSource(BaseModel):
         return self
 
     def matches_file(self, file_path: str) -> bool:
-        return Path(file_path.lower()).match(self.file_pattern.lower())
+        """Match file path against pattern. Handles both local paths and URI strings."""
+        if "/" in file_path and not file_path.startswith("/") and "://" in file_path:
+            filename = file_path.split("/")[-1].split("?")[0].split("#")[0]
+        else:
+            filename = Path(file_path).name
+
+        return Path(filename.lower()).match(self.file_pattern.lower())
 
 
 class CSVSource(DataSource):

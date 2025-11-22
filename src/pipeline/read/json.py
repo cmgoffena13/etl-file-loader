@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
 from pathlib import Path
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, Union
 
 import ijson
 
@@ -19,7 +19,11 @@ class JSONReader(BaseReader):
     SOURCE_TYPE = JSONSource
 
     def __init__(
-        self, file_path: Path, source: DataSource, log_id: int, array_path: str
+        self,
+        file_path: Union[Path, str],
+        source: DataSource,
+        log_id: int,
+        array_path: str,
     ):
         super().__init__(file_path, source, log_id)
         self.array_path: str = array_path
@@ -81,7 +85,7 @@ class JSONReader(BaseReader):
                 first_obj = next(objects)
             except StopIteration:
                 raise NoDataInFileError(
-                    error_values={"source_filename": self.file_path.name}
+                    error_values={"source_filename": self.source_filename}
                 )
 
             # Validate fields using first object
@@ -90,7 +94,7 @@ class JSONReader(BaseReader):
             elif isinstance(first_obj, list):
                 logger.error(f"No data found in JSON file: {self.file_path}")
                 raise NoDataInFileError(
-                    error_values={"source_filename": self.file_path.name}
+                    error_values={"source_filename": self.source_filename}
                 )
             else:
                 first_item = first_obj

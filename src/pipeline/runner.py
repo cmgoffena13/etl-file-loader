@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, Union
 
 import pendulum
 from opentelemetry import trace
@@ -34,7 +34,7 @@ from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.factory import WriterFactory
 from src.process.log import FileLoadLog
 from src.sources.base import DataSource
-from src.utils import get_error_location, retry
+from src.utils import get_error_location, get_file_name, retry
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -43,7 +43,7 @@ tracer = trace.get_tracer(__name__)
 class PipelineRunner:
     def __init__(
         self,
-        file_path: Path,
+        file_path: Union[Path, str],
         source: DataSource,
         engine: Engine,
         metadata: MetaData,
@@ -51,8 +51,8 @@ class PipelineRunner:
         file_load_dlq_table: Table,
     ):
         self.source: DataSource = source
-        self.file_path: Path = file_path
-        self.source_filename: str = file_path.name
+        self.file_path: Union[Path, str] = file_path
+        self.source_filename: str = get_file_name(file_path)
         self.metadata: MetaData = metadata
         self.engine: Engine = engine
         self.Session: sessionmaker[Session] = sessionmaker(bind=self.engine)

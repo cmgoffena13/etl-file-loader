@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,7 +10,7 @@ from src.exception.exceptions import AuditFailedError, GrainValidationError
 from src.pipeline.db_utils import db_create_duplicate_grain_examples_sql
 from src.pipeline.model_utils import get_field_alias
 from src.sources.base import DataSource
-from src.utils import retry
+from src.utils import get_file_name, retry
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 class BaseAuditor(ABC):
     def __init__(
         self,
-        file_path: Path,
+        file_path: Union[Path, str],
         source: DataSource,
         engine: Engine,
         stage_table_name: str,
         log_id: int,
     ):
-        self.file_path: Path = file_path
-        self.source_filename: str = file_path.name
+        self.file_path: Union[Path, str] = file_path
+        self.source_filename: str = get_file_name(file_path)
         self.stage_table_name: str = stage_table_name
         self.source: DataSource = source
         self.engine: Engine = engine
