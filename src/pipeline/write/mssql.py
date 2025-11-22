@@ -105,6 +105,7 @@ class SQLServerWriter(BaseWriter):
                 DataTable,
                 DBNull,
                 SqlBulkCopy,
+                SqlBulkCopyOptions,
                 SqlConnection,
                 SqlConnectionStringBuilder,
             )
@@ -119,7 +120,7 @@ class SQLServerWriter(BaseWriter):
             raise
 
     def _get_dotnet_conn_string(self) -> str:
-        _, _, _, _, SqlConnectionStringBuilder = self._ensure_clr_available()
+        _, _, _, _, _, SqlConnectionStringBuilder = self._ensure_clr_available()
         url = config.DATABASE_URL.replace("mssql+pyodbc://", "mssql://")
         parsed = urlparse(url)
 
@@ -182,7 +183,7 @@ class SQLServerWriter(BaseWriter):
 
     def _convert_value_to_dotnet(self, key: str, value: Any, dotnet_types) -> Any:
         """Convert a Python value to the appropriate .NET type."""
-        _, DBNull, _, _, _ = dotnet_types
+        _, DBNull, _, _, _, _ = dotnet_types
         import System  # type: ignore[import-untyped]
 
         if value is None:
@@ -230,7 +231,7 @@ class SQLServerWriter(BaseWriter):
     ) -> None:
         # DOTNET Setup and Connection - get types once
         dotnet_types = self._ensure_clr_available()
-        DataTable, _, SqlBulkCopy, SqlConnection, _ = dotnet_types
+        DataTable, _, SqlBulkCopy, SqlBulkCopyOptions, SqlConnection, _ = dotnet_types
         dotnet_conn_string = self._get_dotnet_conn_string()
         conn = SqlConnection(dotnet_conn_string)
 
@@ -238,11 +239,13 @@ class SQLServerWriter(BaseWriter):
         valid_dt.TableName = self.stage_table_name
         valid_bulk_copy = SqlBulkCopy(conn)
         valid_bulk_copy.DestinationTableName = self.stage_table_name
+        valid_bulk_copy.BulkCopyOptions = SqlBulkCopyOptions.TableLock
 
         invalid_dt = DataTable()
         invalid_dt.TableName = self.file_load_dlq_table_name
         invalid_bulk_copy = SqlBulkCopy(conn)
         invalid_bulk_copy.DestinationTableName = self.file_load_dlq_table_name
+        invalid_bulk_copy.BulkCopyOptions = SqlBulkCopyOptions.TableLock
 
         valid_batch = [None] * self.batch_size
         valid_index = 0

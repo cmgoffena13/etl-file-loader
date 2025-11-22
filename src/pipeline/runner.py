@@ -129,6 +129,7 @@ class PipelineRunner:
             raise DuplicateFileError(
                 error_values={"source_filename": self.source_filename}
             )
+
         self.log.duplicate_skipped = False
         self._log_update(self.log)
 
@@ -178,8 +179,10 @@ class PipelineRunner:
 
     def audit_data(self) -> None:
         self.log.audit_started_at = pendulum.now("UTC")
+
         self.auditor.audit_grain()
         self.auditor.audit_data()
+
         self.log.audit_ended_at = pendulum.now("UTC")
         self.log.audit_success = True
         self._log_update(self.log)

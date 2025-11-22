@@ -2,10 +2,13 @@
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'fileloader')
 BEGIN
     CREATE DATABASE fileloader;
-    PRINT 'Database fileloader created successfully.';
+    ALTER DATABASE fileloader SET RECOVERY SIMPLE;
+    PRINT 'Database fileloader created successfully with minimal logging.';
 END
 ELSE
 BEGIN
-    PRINT 'Database fileloader already exists.';
+    -- Ensure minimal logging is enabled even if database already exists
+    ALTER DATABASE fileloader SET RECOVERY SIMPLE;
+    PRINT 'Database fileloader already exists. Minimal logging enabled.';
 END
 GO
