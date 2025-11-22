@@ -23,8 +23,10 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def scan_directory(cls, directory_path: Path) -> Queue:
         if not directory_path.exists():
+            logger.error(f"Directory not found: {directory_path}")
             raise DirectoryNotFoundError(f"Directory not found: {directory_path}")
 
+        logger.info(f"Scanning directory: {directory_path}")
         file_paths_queue = Queue()
         for entry in os.scandir(directory_path):
             if entry.is_file() and not entry.name.startswith("."):
@@ -35,8 +37,11 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def copy_file_to_archive(cls, file_path: Path):
         try:
-            shutil.copyfile(file_path, config.ARCHIVE_PATH / file_path.name)
+            archive_path = Path(config.ARCHIVE_PATH / file_path.name)
+            logger.info(f"Copying file from {file_path} to {archive_path}")
+            shutil.copyfile(file_path, archive_path)
         except Exception as e:
+            logger.error(f"Failed to copy file from {file_path} to {archive_path}: {e}")
             raise FileCopyError(
                 f"Failed to copy file from {file_path} to {config.ARCHIVE_PATH / file_path.name}: {e}"
             )
@@ -50,8 +55,10 @@ class FileHelper(BaseFileHelper):
             suffix = file_path.suffix
             destination = config.DUPLICATE_FILES_PATH / f"{stem}_{timestamp}{suffix}"
         try:
+            logger.info(f"Moving file from {file_path} to {destination}")
             shutil.move(file_path, destination)
         except Exception as e:
+            logger.error(f"Failed to move file from {file_path} to {destination}: {e}")
             raise FileMoveError(
                 f"Failed to move file from {file_path} to {destination}: {e}"
             )
@@ -59,10 +66,12 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def delete_file(cls, file_path: Path) -> None:
         try:
+            logger.info(f"Deleting file: {file_path}")
             file_path.unlink()
         except FileNotFoundError:
             pass
         except Exception as e:
+            logger.error(f"Failed to delete file {file_path}: {e}")
             raise FileDeleteError(f"Failed to delete file {file_path}: {e}")
 
     @classmethod

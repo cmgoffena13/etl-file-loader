@@ -107,6 +107,8 @@ class AzureFileHelper(BaseFileHelper):
         if isinstance(directory_path, Path):
             raise ValueError("AzureFileHelper requires Azure Blob URI, not local Path")
 
+        logger.info(f"Scanning Azure Blob directory: {directory_path}")
+
         _, container, prefix = cls._parse_azure_uri(str(directory_path))
         if prefix and not prefix.endswith("/"):
             prefix += "/"
@@ -149,8 +151,10 @@ class AzureFileHelper(BaseFileHelper):
         archive_blob = (
             f"{archive_prefix.rstrip('/')}/{filename}" if archive_prefix else filename
         )
+        archive_path = f"{archive_uri.rstrip('/')}/{archive_blob}"
 
         blob_service_client = cls._get_blob_service_client()
+        logger.info(f"Copying Azure Blob from {file_path} to {archive_path}")
         try:
             source_blob_client = blob_service_client.get_blob_client(
                 container=source_container, blob=source_blob
@@ -205,7 +209,10 @@ class AzureFileHelper(BaseFileHelper):
             # File doesn't exist, use original name
             pass
 
+        destination_path = f"{duplicate_uri.rstrip('/')}/{destination_blob}"
+
         try:
+            logger.info(f"Moving Azure Blob from {file_path} to {destination_path}")
             source_blob_client = blob_service_client.get_blob_client(
                 container=source_container, blob=source_blob
             )
@@ -229,6 +236,7 @@ class AzureFileHelper(BaseFileHelper):
 
         _, container, blob_name = cls._parse_azure_uri(str(file_path))
         blob_service_client = cls._get_blob_service_client()
+        logger.info(f"Deleting Azure Blob: {file_path}")
         try:
             blob_client = blob_service_client.get_blob_client(
                 container=container, blob=blob_name

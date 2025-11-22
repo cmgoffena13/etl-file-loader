@@ -56,6 +56,8 @@ class GCPFileHelper(BaseFileHelper):
         if isinstance(directory_path, Path):
             raise ValueError("GCPFileHelper requires GCS URI, not local Path")
 
+        logger.info(f"Scanning GCS directory: {directory_path}")
+
         bucket_name, prefix = cls._parse_gcs_uri(str(directory_path))
         if prefix and not prefix.endswith("/"):
             prefix += "/"
@@ -95,8 +97,10 @@ class GCPFileHelper(BaseFileHelper):
         archive_blob_name = (
             f"{archive_prefix.rstrip('/')}/{filename}" if archive_prefix else filename
         )
+        archive_path = f"gs://{archive_bucket_name}/{archive_blob_name}"
 
         storage_client = cls._get_storage_client()
+        logger.info(f"Copying GCS blob from {file_path} to {archive_path}")
         try:
             source_bucket = storage_client.bucket(source_bucket_name)
             source_blob = source_bucket.blob(source_blob_name)
@@ -144,7 +148,10 @@ class GCPFileHelper(BaseFileHelper):
             # File doesn't exist, use original name
             pass
 
+        destination_path = f"gs://{duplicate_bucket_name}/{destination_blob_name}"
+
         try:
+            logger.info(f"Moving GCS blob from {file_path} to {destination_path}")
             source_bucket = storage_client.bucket(source_bucket_name)
             source_blob = source_bucket.blob(source_blob_name)
             dest_bucket = storage_client.bucket(duplicate_bucket_name)
@@ -165,6 +172,7 @@ class GCPFileHelper(BaseFileHelper):
 
         bucket_name, blob_name = cls._parse_gcs_uri(str(file_path))
         storage_client = cls._get_storage_client()
+        logger.info(f"Deleting GCS blob: {file_path}")
         try:
             bucket = storage_client.bucket(bucket_name)
             blob = bucket.blob(blob_name)

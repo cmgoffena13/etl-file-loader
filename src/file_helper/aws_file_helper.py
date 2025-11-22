@@ -52,6 +52,8 @@ class AWSFileHelper(BaseFileHelper):
         if isinstance(directory_path, Path):
             raise ValueError("AWSFileHelper requires S3 URI, not local Path")
 
+        logger.info(f"Scanning S3 directory: {directory_path}")
+
         bucket, prefix = cls._parse_s3_uri(str(directory_path))
         if prefix and not prefix.endswith("/"):
             prefix += "/"
@@ -93,8 +95,10 @@ class AWSFileHelper(BaseFileHelper):
         archive_key = (
             f"{archive_prefix.rstrip('/')}/{filename}" if archive_prefix else filename
         )
+        archive_path = f"s3://{archive_bucket}/{archive_key}"
 
         s3_client = cls._get_s3_client()
+        logger.info(f"Copying S3 object from {file_path} to {archive_path}")
         try:
             copy_source = {"Bucket": bucket, "Key": source_key}
             s3_client.copy_object(
@@ -139,11 +143,14 @@ class AWSFileHelper(BaseFileHelper):
                 if duplicate_prefix
                 else f"{stem}_{timestamp}{suffix}"
             )
-        except s3_client.exceptions.ClientError:
+        except ClientError:
             # File doesn't exist, use original name
             pass
 
+        destination_path = f"s3://{duplicate_bucket}/{destination_key}"
+
         try:
+            logger.info(f"Moving S3 object from {file_path} to {destination_path}")
             # Copy then delete (S3 doesn't have move)
             copy_source = {"Bucket": bucket, "Key": source_key}
             s3_client.copy_object(
@@ -166,6 +173,7 @@ class AWSFileHelper(BaseFileHelper):
 
         bucket, key = cls._parse_s3_uri(str(file_path))
         s3_client = cls._get_s3_client()
+        logger.info(f"Deleting S3 object: {file_path}")
         try:
             s3_client.delete_object(Bucket=bucket, Key=key)
         except Exception as e:
@@ -199,7 +207,10 @@ class AWSFileHelper(BaseFileHelper):
         try:
             response = s3_client.get_object(Bucket=bucket, Key=key)
             yield response["Body"]
-        except s3_client.exceptions.NoSuchKey:
-            raise FileNotFoundError(f"S3 object not found: {file_path}")
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code == "NoSuchKey":
+                raise FileNotFoundError(f"S3 object not found: {file_path}")
+            raise IOError(f"Failed to stream S3 object {file_path}: {e}")
         except Exception as e:
             raise IOError(f"Failed to stream S3 object {file_path}: {e}")

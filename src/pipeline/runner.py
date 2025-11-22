@@ -49,6 +49,7 @@ class PipelineRunner:
         metadata: MetaData,
         file_load_log_table: Table,
         file_load_dlq_table: Table,
+        file_helper: BaseFileHelper,
     ):
         self.source: DataSource = source
         self.file_path: Union[Path, str] = file_path
@@ -69,7 +70,7 @@ class PipelineRunner:
             self.log.source_filename,
             self.log.started_at,
         )
-        self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
+        self.file_helper: BaseFileHelper = file_helper
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id
         )

@@ -49,6 +49,7 @@ class Processor:
                 metadata=self.metadata,
                 file_load_log_table=self.file_load_log_table,
                 file_load_dlq_table=self.file_load_dlq_table,
+                file_helper=self.file_helper,
             )
             result = runner.run()
             self.results.append(result)
