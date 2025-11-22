@@ -34,7 +34,7 @@ from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.factory import WriterFactory
 from src.process.log import FileLoadLog
 from src.sources.base import DataSource
-from src.utils import delete_temp_file, get_error_location, retry
+from src.utils import get_error_location, retry
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -73,11 +73,8 @@ class PipelineRunner:
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id
         )
-        # Download cloud files to local temp if needed
-        self.local_file_path: Path = self.file_helper.download_to_local(self.file_path)
-        self.is_temp_file: bool = self.local_file_path != self.file_path
         self.reader: BaseReader = ReaderFactory.create_reader(
-            self.local_file_path, self.source, self.log.id
+            self.file_path, self.source, self.log.id
         )
         self.validator: Validator = Validator(
             self.file_path, self.source, self.reader.starting_row_number, self.log.id
@@ -267,11 +264,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
-                if self.is_temp_file:
-                    delete_temp_file(self.local_file_path)
-                    self.file_helper.delete_file(self.file_path)
-                else:
-                    self.file_helper.delete_file(self.reader.file_path)
+                self.file_helper.delete_file(self.file_path)
             return self.result
 
     def __del__(self):

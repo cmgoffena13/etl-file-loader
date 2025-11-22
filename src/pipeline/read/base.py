@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterator
 
 from src.exception.exceptions import MissingColumnsError
+from src.file_helper.base import BaseFileHelper
+from src.file_helper.factory import FileHelperFactory
 from src.settings import config
 from src.sources.base import DataSource
 
@@ -22,6 +24,7 @@ class BaseReader(ABC):
         )
         self.batch_size: int = config.BATCH_SIZE
         self.rows_read: int = 0
+        self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
 
     def _validate_fields(self, actual_fields: set) -> None:
         actual_file_fields = set(field.lower() for field in actual_fields)

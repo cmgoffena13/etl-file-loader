@@ -67,7 +67,3 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def get_file_path(cls, directory_path: Path, filename: str) -> Path:
         return Path(directory_path / filename)
-
-    @classmethod
-    def download_to_local(cls, file_path: Path) -> Path:
-        return file_path

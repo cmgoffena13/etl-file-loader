@@ -63,17 +63,3 @@ class BaseFileHelper(ABC):
         For cloud storage: returns URI string (e.g., 's3://bucket/path/filename.csv')
         """
         pass
-
-    @classmethod
-    @abstractmethod
-    def download_to_local(cls, file_path: Union[Path, str]) -> Path:
-        """
-        Ensure a file is available locally, downloading from cloud if necessary.
-
-        For local storage: returns the Path as-is
-        For cloud storage: downloads the file to a temporary location and returns that Path.
-        The caller is responsible for cleanup of temporary files.
-
-        Returns a local Path that can be used with standard file I/O operations.
-        """
-        pass
