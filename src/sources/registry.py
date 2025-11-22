@@ -39,7 +39,9 @@ class SourceRegistry(BaseModel):
         ]
 
         if len(matching_sources) == 0:
-            logger.warning(f"No source configuration found for file '{file_path}'. ")
+            logger.warning(
+                f"No source configuration found for file '{file_path.name}'. "
+            )
             return None
         elif len(matching_sources) == 1:
             return matching_sources[0]

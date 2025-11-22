@@ -34,7 +34,7 @@ class Processor:
         self.results: list[tuple[bool, str, Optional[str]]] = []
 
     def process_file(self, file_name: str):
-        file_path = config.DIRECTORY_PATH / file_name
+        file_path = Path(config.DIRECTORY_PATH / file_name)
         try:
             source = MASTER_REGISTRY.find_source_for_file(file_path)
         except Exception as e:
@@ -51,6 +51,11 @@ class Processor:
             )
             result = runner.run()
             self.results.append(result)
+        else:
+            FileHelper.copy_file_to_archive(file_path)
+            self.results.append(
+                (False, file_name, f"No source found for file {file_name}")
+            )
 
     def _worker(self, file_paths_queue: Queue):
         while True:
