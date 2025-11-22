@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from queue import Empty, Queue
 from typing import Optional
 
