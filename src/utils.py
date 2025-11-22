@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.exception.base import BaseFileErrorEmailException
+from src.exception.exceptions import FileDeleteError
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,15 @@ def retry(attempts: int = 3, delay: float = 0.25, backoff: float = 2.0):
         return wrapper
 
     return decorator
+
+
+def delete_temp_file(file_path: Path) -> None:
+    try:
+        file_path.unlink()
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        raise FileDeleteError(f"Failed to delete local file {file_path}: {e}")
 
 
 def get_error_location(exception: Exception) -> Optional[str]:

@@ -35,7 +35,7 @@ class Processor:
         self.results: list[tuple[bool, str, Optional[str]]] = []
 
     def process_file(self, file_name: str):
-        file_path = Path(config.DIRECTORY_PATH / file_name)
+        file_path = self.file_helper.get_file_path(config.DIRECTORY_PATH, file_name)
         try:
             source = MASTER_REGISTRY.find_source_for_file(file_path)
         except Exception as e:
