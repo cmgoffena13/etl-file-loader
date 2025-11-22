@@ -41,6 +41,12 @@ class AWSFileHelper(BaseFileHelper):
             client_kwargs = {}
             if config.AWS_REGION:
                 client_kwargs["region_name"] = config.AWS_REGION
+            if config.AWS_ACCESS_KEY_ID:
+                client_kwargs["aws_access_key_id"] = config.AWS_ACCESS_KEY_ID
+            if config.AWS_SECRET_ACCESS_KEY:
+                client_kwargs["aws_secret_access_key"] = config.AWS_SECRET_ACCESS_KEY
+            if config.AWS_SESSION_TOKEN:
+                client_kwargs["aws_session_token"] = config.AWS_SESSION_TOKEN
             cls._s3_client = boto3.client("s3", **client_kwargs)
 
         return cls._s3_client

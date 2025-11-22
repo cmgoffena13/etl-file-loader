@@ -51,11 +51,7 @@ class AzureFileHelper(BaseFileHelper):
             raise ValueError(f"Invalid Azure Blob URI: {uri}")
 
     @classmethod
-    def _get_blob_service_client(cls, client=None):
-        if client is not None:
-            cls._blob_service_client = client
-            return client
-
+    def _get_blob_service_client(cls):
         if cls._blob_service_client is None:
             # Priority 1: Connection string
             if config.AZURE_STORAGE_CONNECTION_STRING:

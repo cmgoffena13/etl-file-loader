@@ -20,9 +20,6 @@ from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
 
-if config.GOOGLE_APPLICATION_CREDENTIALS:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = config.GOOGLE_APPLICATION_CREDENTIALS
-
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +39,11 @@ class GCPFileHelper(BaseFileHelper):
     @classmethod
     def _get_storage_client(cls):
         if cls._storage_client is None:
+            if config.GOOGLE_APPLICATION_CREDENTIALS:
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
+                    config.GOOGLE_APPLICATION_CREDENTIALS
+                )
+
             client_kwargs = {}
             if config.GCP_PROJECT_ID:
                 client_kwargs["project"] = config.GCP_PROJECT_ID

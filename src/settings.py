@@ -101,9 +101,9 @@ class GlobalConfig(BaseConfig):
 
 
 class DevConfig(GlobalConfig):
-    DIRECTORY_PATH: Path = Path("src/tests/test_directory")
-    ARCHIVE_PATH: Path = Path("src/tests/test_archive")
-    DUPLICATE_FILES_PATH: Path = Path("src/tests/test_duplicate_files")
+    DIRECTORY_PATH: Union[Path, str] = Path("src/tests/test_directory")
+    ARCHIVE_PATH: Union[Path, str] = Path("src/tests/test_archive")
+    DUPLICATE_FILES_PATH: Union[Path, str] = Path("src/tests/test_duplicate_files")
     LOG_LEVEL: str = "DEBUG"
     OTEL_PYTHON_LOG_CORRELATION: bool = False
 
@@ -112,9 +112,9 @@ class DevConfig(GlobalConfig):
 
 class TestConfig(GlobalConfig):
     DATABASE_URL: str = "sqlite:///:memory:"
-    DIRECTORY_PATH: Path = Path("src/tests/test_data")
-    ARCHIVE_PATH: Path = Path("src/tests/archive_data")
-    DUPLICATE_FILES_PATH: Path = Path("src/tests/duplicate_files_data")
+    DIRECTORY_PATH: Union[Path, str] = Path("src/tests/test_data")
+    ARCHIVE_PATH: Union[Path, str] = Path("src/tests/archive_data")
+    DUPLICATE_FILES_PATH: Union[Path, str] = Path("src/tests/duplicate_files_data")
     BATCH_SIZE: int = 100
     OTEL_PYTHON_LOG_CORRELATION: bool = False
 
