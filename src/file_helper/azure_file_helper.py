@@ -1,3 +1,4 @@
+import io
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -24,8 +25,77 @@ from src.utils import retry
 logger = logging.getLogger(__name__)
 
 
+class AzureChunkedStreamReader:
+    """File-like wrapper for Azure StorageStreamDownloader that reads chunks on demand."""
+
+    def __init__(self, download_stream):
+        self.download_stream = download_stream
+        self._chunks = download_stream.chunks()
+        self._buffer = b""
+        self._closed = False
+
+    def read(self, size=-1):
+        """Read bytes from the stream, fetching chunks as needed."""
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if size == -1:
+            result = self._buffer
+            self._buffer = b""
+            for chunk in self._chunks:
+                result += chunk
+            return result
+
+        while len(self._buffer) < size:
+            try:
+                chunk = next(self._chunks)
+                self._buffer += chunk
+            except StopIteration:
+                break
+
+        if len(self._buffer) <= size:
+            result = self._buffer
+            self._buffer = b""
+            return result
+        else:
+            result = self._buffer[:size]
+            self._buffer = self._buffer[size:]
+            return result
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
+
+    @property
+    def closed(self):
+        """Property expected by TextIOWrapper."""
+        return self._closed
+
+    def close(self):
+        self._closed = True
+        if hasattr(self.download_stream, "close"):
+            self.download_stream.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
 class AzureFileHelper(BaseFileHelper):
     _blob_service_client = None
+
+    @classmethod
+    def _get_account_name_from_url(cls, url: str) -> str:
+        """Extract account name from Azure storage account URL."""
+        parsed = urlparse(url)
+        return parsed.netloc.split(".")[0]
 
     @classmethod
     def _parse_azure_uri(cls, uri: str) -> tuple[str, str, str]:
@@ -33,12 +103,17 @@ class AzureFileHelper(BaseFileHelper):
         parsed = urlparse(uri)
         if parsed.scheme == "azure":
             # Format: azure://container/blob-path
+            # For azure:// URIs, we need AZURE_STORAGE_ACCOUNT_URL to extract account name
             container = parsed.netloc
             blob_name = parsed.path.lstrip("/")
-            # Account name from environment or config
-            account_name = config.AZURE_STORAGE_ACCOUNT_NAME
-            if not account_name:
-                raise ValueError("AZURE_STORAGE_ACCOUNT_NAME must be set in config")
+            if not config.AZURE_STORAGE_ACCOUNT_URL:
+                raise ValueError(
+                    "AZURE_STORAGE_ACCOUNT_URL must be set when using azure:// URIs. "
+                    "Alternatively, use full https:// URIs."
+                )
+            account_name = cls._get_account_name_from_url(
+                config.AZURE_STORAGE_ACCOUNT_URL
+            )
             return account_name, container, blob_name
         elif parsed.scheme == "https":
             # Format: https://account.blob.core.windows.net/container/blob-path
@@ -60,38 +135,31 @@ class AzureFileHelper(BaseFileHelper):
                 )
                 return cls._blob_service_client
 
-            # Priority 2: Account name + key
-            if config.AZURE_STORAGE_ACCOUNT_NAME and config.AZURE_STORAGE_ACCOUNT_KEY:
-                credential = AzureNamedKeyCredential(
-                    config.AZURE_STORAGE_ACCOUNT_NAME, config.AZURE_STORAGE_ACCOUNT_KEY
-                )
-                # Use AZURE_STORAGE_ACCOUNT_URL if provided, otherwise construct from account name
-                account_url = (
+            # Priority 2: Account URL + key
+            if config.AZURE_STORAGE_ACCOUNT_URL and config.AZURE_STORAGE_ACCOUNT_KEY:
+                account_name = cls._get_account_name_from_url(
                     config.AZURE_STORAGE_ACCOUNT_URL
-                    or f"https://{config.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
+                )
+                credential = AzureNamedKeyCredential(
+                    account_name, config.AZURE_STORAGE_ACCOUNT_KEY
                 )
                 cls._blob_service_client = BlobServiceClient(
-                    account_url=account_url,
+                    account_url=config.AZURE_STORAGE_ACCOUNT_URL,
                     credential=credential,
                 )
                 return cls._blob_service_client
 
             # Priority 3: Default credential chain (Managed Identity, etc.)
-            if config.AZURE_STORAGE_ACCOUNT_NAME:
-                # Use AZURE_STORAGE_ACCOUNT_URL if provided, otherwise construct from account name
-                account_url = (
-                    config.AZURE_STORAGE_ACCOUNT_URL
-                    or f"https://{config.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
-                )
+            if config.AZURE_STORAGE_ACCOUNT_URL:
                 cls._blob_service_client = BlobServiceClient(
-                    account_url=account_url,
+                    account_url=config.AZURE_STORAGE_ACCOUNT_URL,
                     credential=DefaultAzureCredential(),
                 )
                 return cls._blob_service_client
 
             raise ValueError(
                 "Azure credentials not configured. Set AZURE_STORAGE_CONNECTION_STRING, "
-                "or AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY"
+                "or AZURE_STORAGE_ACCOUNT_URL and AZURE_STORAGE_ACCOUNT_KEY"
             )
 
         return cls._blob_service_client
@@ -271,7 +339,9 @@ class AzureFileHelper(BaseFileHelper):
                 container=container, blob=blob_name
             )
             download_stream = blob_client.download_blob()
-            yield download_stream
+            # Use chunked streaming wrapper to read chunks on demand
+            # This avoids loading the entire file into memory
+            yield AzureChunkedStreamReader(download_stream)
         except Exception as e:
             if "BlobNotFound" in str(e) or "404" in str(e):
                 raise FileNotFoundError(f"Azure Blob not found: {file_path}")

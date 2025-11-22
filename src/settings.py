@@ -60,7 +60,6 @@ class GlobalConfig(BaseConfig):
     # Azure Blob Storage settings
     AZURE_STORAGE_CONNECTION_STRING: Optional[str] = None
     AZURE_STORAGE_ACCOUNT_URL: Optional[str] = None
-    AZURE_STORAGE_ACCOUNT_NAME: Optional[str] = None
     AZURE_STORAGE_ACCOUNT_KEY: Optional[str] = None
 
     # GCP Cloud Storage settings
