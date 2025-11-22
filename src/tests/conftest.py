@@ -3,7 +3,10 @@ import os
 # Needs to happen before local imports
 os.environ["ENV_STATE"] = "test"
 import csv
+import json
+from typing import Any
 
+import pyexcel
 import pytest
 
 from src.process.processor import Processor
@@ -58,6 +61,43 @@ def create_csv_file(session_temp_dir):
         return file_name
 
     yield _create_csv_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
+def create_excel_file(session_temp_dir):
+    file_paths = []
+
+    def _create_excel_file(file_name: str, data: list[list[str]]):
+        file_path = session_temp_dir / file_name
+        pyexcel.save_as(
+            array=data, dest_file_name=str(file_path), name_columns_by_row=0
+        )
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_excel_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
+def create_json_file(session_temp_dir):
+    file_paths = []
+
+    def _create_json_file(file_name: str, data: dict[str, Any]):
+        file_path = session_temp_dir / file_name
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_json_file
 
     for file_path in file_paths:
         if file_path.exists():
