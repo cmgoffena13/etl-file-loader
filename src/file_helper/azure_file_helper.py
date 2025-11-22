@@ -19,11 +19,14 @@ from src.exception.exceptions import (
 )
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
+from src.utils import retry
 
 logger = logging.getLogger(__name__)
 
 
 class AzureFileHelper(BaseFileHelper):
+    _blob_service_client = None
+
     @classmethod
     def _parse_azure_uri(cls, uri: str) -> tuple[str, str, str]:
         """Parse Azure Blob URI into account, container, and blob name."""
@@ -48,41 +51,53 @@ class AzureFileHelper(BaseFileHelper):
             raise ValueError(f"Invalid Azure Blob URI: {uri}")
 
     @classmethod
-    def _get_blob_service_client(cls):
-        """Get Azure Blob Service Client. Uses connection string or account key from environment."""
-        connection_string = getattr(config, "AZURE_STORAGE_CONNECTION_STRING", None)
-        if connection_string:
-            return BlobServiceClient.from_connection_string(connection_string)
+    def _get_blob_service_client(cls, client=None):
+        if client is not None:
+            cls._blob_service_client = client
+            return client
 
-        account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
-        account_key = getattr(config, "AZURE_STORAGE_ACCOUNT_KEY", None)
-        if account_name and account_key:
-            credential = AzureNamedKeyCredential(account_name, account_key)
-            return BlobServiceClient(
-                account_url=f"https://{account_name}.blob.core.windows.net",
-                credential=credential,
+        if cls._blob_service_client is None:
+            connection_string = getattr(config, "AZURE_STORAGE_CONNECTION_STRING", None)
+            if connection_string:
+                cls._blob_service_client = BlobServiceClient.from_connection_string(
+                    connection_string
+                )
+                return cls._blob_service_client
+
+            account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
+            account_key = getattr(config, "AZURE_STORAGE_ACCOUNT_KEY", None)
+            if account_name and account_key:
+                credential = AzureNamedKeyCredential(account_name, account_key)
+                cls._blob_service_client = BlobServiceClient(
+                    account_url=f"https://{account_name}.blob.core.windows.net",
+                    credential=credential,
+                )
+                return cls._blob_service_client
+
+            # Try default credential chain (Managed Identity, etc.)
+            account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
+            if account_name:
+                cls._blob_service_client = BlobServiceClient(
+                    account_url=f"https://{account_name}.blob.core.windows.net",
+                    credential=DefaultAzureCredential(),
+                )
+                return cls._blob_service_client
+
+            raise ValueError(
+                "Azure credentials not configured. Set AZURE_STORAGE_CONNECTION_STRING, "
+                "or AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY"
             )
 
-        # Try default credential chain (Managed Identity, etc.)
-        account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
-        if account_name:
-            return BlobServiceClient(
-                account_url=f"https://{account_name}.blob.core.windows.net",
-                credential=DefaultAzureCredential(),
-            )
-
-        raise ValueError(
-            "Azure credentials not configured. Set AZURE_STORAGE_CONNECTION_STRING, "
-            "or AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY"
-        )
+        return cls._blob_service_client
 
     @classmethod
+    @retry()
     def scan_directory(cls, directory_path: Union[Path, str]) -> Queue:
         """Scan Azure Blob container/prefix and return queue of filenames."""
         if isinstance(directory_path, Path):
             raise ValueError("AzureFileHelper requires Azure Blob URI, not local Path")
 
-        account_name, container, prefix = cls._parse_azure_uri(str(directory_path))
+        _, container, prefix = cls._parse_azure_uri(str(directory_path))
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
@@ -107,6 +122,7 @@ class AzureFileHelper(BaseFileHelper):
         return file_paths_queue
 
     @classmethod
+    @retry()
     def copy_file_to_archive(cls, file_path: Union[Path, str]):
         """Copy Azure Blob to archive location."""
         if isinstance(file_path, Path):
@@ -137,6 +153,7 @@ class AzureFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def copy_file_to_duplicate_files(cls, file_path: Union[Path, str]):
         """Move Azure Blob to duplicate files location."""
         if isinstance(file_path, Path):
@@ -192,6 +209,7 @@ class AzureFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def delete_file(cls, file_path: Union[Path, str]) -> None:
         """Delete Azure Blob."""
         if isinstance(file_path, Path):
@@ -220,6 +238,7 @@ class AzureFileHelper(BaseFileHelper):
 
     @classmethod
     @contextmanager
+    @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
         """Get streaming download from Azure Blob Storage."""
         if isinstance(file_path, Path):

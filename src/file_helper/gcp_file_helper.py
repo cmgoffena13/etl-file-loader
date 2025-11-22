@@ -17,11 +17,14 @@ from src.exception.exceptions import (
 )
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
+from src.utils import retry
 
 logger = logging.getLogger(__name__)
 
 
 class GCPFileHelper(BaseFileHelper):
+    _storage_client = None
+
     @classmethod
     def _parse_gcs_uri(cls, uri: str) -> tuple[str, str]:
         """Parse GCS URI (gs://bucket/blob-path) into bucket and blob name."""
@@ -33,11 +36,18 @@ class GCPFileHelper(BaseFileHelper):
         return bucket, blob_name
 
     @classmethod
-    def _get_storage_client(cls):
-        """Get GCS Storage Client. Uses default credentials from environment."""
-        return storage.Client()
+    def _get_storage_client(cls, client=None):
+        if client is not None:
+            cls._storage_client = client
+            return client
+
+        if cls._storage_client is None:
+            cls._storage_client = storage.Client()
+
+        return cls._storage_client
 
     @classmethod
+    @retry()
     def scan_directory(cls, directory_path: Union[Path, str]) -> Queue:
         """Scan GCS bucket/prefix and return queue of filenames."""
         if isinstance(directory_path, Path):
@@ -67,6 +77,7 @@ class GCPFileHelper(BaseFileHelper):
         return file_paths_queue
 
     @classmethod
+    @retry()
     def copy_file_to_archive(cls, file_path: Union[Path, str]):
         """Copy GCS blob to archive location."""
         if isinstance(file_path, Path):
@@ -94,6 +105,7 @@ class GCPFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def copy_file_to_duplicate_files(cls, file_path: Union[Path, str]):
         """Move GCS blob to duplicate files location."""
         if isinstance(file_path, Path):
@@ -142,6 +154,7 @@ class GCPFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def delete_file(cls, file_path: Union[Path, str]) -> None:
         """Delete GCS blob."""
         if isinstance(file_path, Path):
@@ -169,6 +182,7 @@ class GCPFileHelper(BaseFileHelper):
 
     @classmethod
     @contextmanager
+    @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
         """Get streaming download from GCS."""
         if isinstance(file_path, Path):

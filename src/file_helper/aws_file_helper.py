@@ -16,11 +16,14 @@ from src.exception.exceptions import (
 )
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
+from src.utils import retry
 
 logger = logging.getLogger(__name__)
 
 
 class AWSFileHelper(BaseFileHelper):
+    _s3_client = None
+
     @classmethod
     def _parse_s3_uri(cls, uri: str) -> tuple[str, str]:
         """Parse S3 URI (s3://bucket/key) into bucket and key."""
@@ -32,11 +35,18 @@ class AWSFileHelper(BaseFileHelper):
         return bucket, key
 
     @classmethod
-    def _get_s3_client(cls):
-        """Get S3 client. Uses default credentials from environment or IAM role."""
-        return boto3.client("s3")
+    def _get_s3_client(cls, client=None):
+        if client is not None:
+            cls._s3_client = client
+            return client
+
+        if cls._s3_client is None:
+            cls._s3_client = boto3.client("s3")
+
+        return cls._s3_client
 
     @classmethod
+    @retry()
     def scan_directory(cls, directory_path: Union[Path, str]) -> Queue:
         """Scan S3 bucket/prefix and return queue of filenames."""
         if isinstance(directory_path, Path):
@@ -65,6 +75,7 @@ class AWSFileHelper(BaseFileHelper):
         return file_paths_queue
 
     @classmethod
+    @retry()
     def copy_file_to_archive(cls, file_path: Union[Path, str]):
         """Copy S3 object to archive location."""
         if isinstance(file_path, Path):
@@ -94,6 +105,7 @@ class AWSFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def copy_file_to_duplicate_files(cls, file_path: Union[Path, str]):
         """Move S3 object to duplicate files location."""
         if isinstance(file_path, Path):
@@ -143,6 +155,7 @@ class AWSFileHelper(BaseFileHelper):
             )
 
     @classmethod
+    @retry()
     def delete_file(cls, file_path: Union[Path, str]) -> None:
         """Delete S3 object."""
         if isinstance(file_path, Path):
@@ -168,6 +181,7 @@ class AWSFileHelper(BaseFileHelper):
 
     @classmethod
     @contextmanager
+    @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
         """Get streaming download from S3."""
         if isinstance(file_path, Path):

@@ -59,6 +59,7 @@ def process(
             processor.process_file(file)
             progress.update(task, description="[green]✓ Complete!")
     else:
+        console.print("[green]Gathering files to process...[/green]")
         total_files = processor.file_paths_queue.qsize()
 
         if total_files == 0:
