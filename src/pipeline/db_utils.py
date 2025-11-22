@@ -309,42 +309,6 @@ def db_start_log(
             raise e
 
 
-def db_create_grain_validation_sql(source: DataSource) -> str:
-    drivername = config.DRIVERNAME
-
-    grain_sql = None
-
-    if len(source.grain) == 1:
-        grain_sql = f"SELECT CASE WHEN COUNT(DISTINCT {source.grain[0]}) = COUNT(*) THEN 1 ELSE 0 END AS grain_unique FROM {{table}}"
-    else:
-        if drivername == "mssql":
-            # MSSQL requires concatenation for multiple columns
-            concat_parts = []
-            for col in source.grain:
-                concat_parts.append(f"CAST({col} AS VARCHAR(4000))")
-            concat_expr = " + '||' + ".join(concat_parts)
-            grain_sql = f"SELECT CASE WHEN COUNT(DISTINCT {concat_expr}) = COUNT(*) THEN 1 ELSE 0 END AS grain_unique FROM {{table}}"
-        elif drivername == "postgresql":
-            # PostgreSQL uses tuple syntax for multiple columns
-            grain_cols = ", ".join(source.grain)
-            grain_sql = f"SELECT CASE WHEN COUNT(DISTINCT ({grain_cols})) = COUNT(*) THEN 1 ELSE 0 END AS grain_unique FROM {{table}}"
-        elif drivername in ["mysql", "sqlite"]:
-            # MySQL uses CONCAT for multiple columns
-            concat_args = []
-            for col in source.grain:
-                concat_args.append(col)
-                concat_args.append("'||'")
-            # Remove the last '||' separator
-            concat_args = concat_args[:-1]
-            concat_expr = "CONCAT(" + ", ".join(concat_args) + ")"
-            grain_sql = f"SELECT CASE WHEN COUNT(DISTINCT {concat_expr}) = COUNT(*) THEN 1 ELSE 0 END AS grain_unique FROM {{table}}"
-
-        else:
-            raise ValueError(f"Unsupported database dialect: {drivername}")
-
-    return grain_sql
-
-
 def db_create_duplicate_grain_examples_sql(source: DataSource, limit: int = 5) -> str:
     drivername = config.DRIVERNAME
 

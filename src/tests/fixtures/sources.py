@@ -26,6 +26,14 @@ TEST_CSV_SOURCE = CSVSource(
     encoding="utf-8",
     skip_rows=0,
     validation_error_threshold=0.0,  # Fail on any validation errors
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN unit_price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
 )
 
 

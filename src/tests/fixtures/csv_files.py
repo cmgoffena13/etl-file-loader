@@ -77,3 +77,47 @@ CSV_VALIDATION_ERROR = [
         "Jane Smith",
     ],
 ]
+
+CSV_MISSING_COLUMNS = [
+    [
+        "transaction_id",
+        "customer_id",
+        "product_sku",
+        "quantity",
+        "unit_price",
+        "total_amount",
+        "sales_rep",
+    ],
+    [
+        "TXN001",
+        "CUST001",
+        "SKU001",
+        "2",
+        "10.50",
+        "21.00",
+        "John Doe",
+    ],
+]
+
+CSV_FAIL_AUDIT = [
+    [
+        "transaction_id",
+        "customer_id",
+        "product_sku",
+        "quantity",
+        "unit_price",
+        "total_amount",
+        "sale_date",
+        "sales_rep",
+    ],
+    [
+        "TXN001",
+        "CUST001",
+        "SKU001",
+        "2",
+        "-10.50",
+        "21.00",
+        "2024-01-15",
+        "John Doe",
+    ],
+]

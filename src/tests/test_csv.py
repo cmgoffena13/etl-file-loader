@@ -1,6 +1,8 @@
 from src.tests.fixtures.csv_files import (
     CSV_BLANK_HEADER,
     CSV_DUPLICATES,
+    CSV_FAIL_AUDIT,
+    CSV_MISSING_COLUMNS,
     CSV_VALIDATION_ERROR,
 )
 
@@ -17,7 +19,7 @@ def test_csv_with_blank_header(create_csv_file, test_processor):
     success, filename, error = test_processor.results[0]
     assert success is False
     assert "sales_blank_header.csv" in filename
-    assert error is not None
+    assert error == "MissingHeaderError"
 
 
 def test_csv_with_duplicate_grain(create_csv_file, test_processor):
@@ -34,7 +36,7 @@ def test_csv_with_duplicate_grain(create_csv_file, test_processor):
     assert len(test_processor.results) == 1
     success, _, error = test_processor.results[0]
     assert success is False
-    assert error is not None
+    assert error == "GrainValidationError"
 
 
 def test_csv_with_validation_error(create_csv_file, test_processor):
@@ -52,4 +54,55 @@ def test_csv_with_validation_error(create_csv_file, test_processor):
     success, filename, error = test_processor.results[0]
     assert success is False
     assert "sales_validation_error.csv" in filename
-    assert error is not None
+    assert error == "ValidationThresholdExceededError"
+
+
+def test_csv_with_missing_header(create_csv_file, test_processor):
+    """Test that CSV files with missing headers raise appropriate errors."""
+    create_csv_file("sales_no_header.csv", [])
+
+    test_processor.results.clear()
+
+    # Process the file - should fail due to missing header
+    test_processor.process_file("sales_no_header.csv")
+
+    # Check that processing failed
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is False
+    assert "sales_no_header.csv" in filename
+    assert error == "MissingHeaderError"
+
+
+def test_csv_with_missing_columns(create_csv_file, test_processor):
+    """Test that CSV files with missing required columns raise appropriate errors."""
+    create_csv_file("sales_missing_columns.csv", CSV_MISSING_COLUMNS)
+
+    test_processor.results.clear()
+
+    # Process the file - should fail due to missing columns
+    test_processor.process_file("sales_missing_columns.csv")
+
+    # Check that processing failed
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is False
+    assert "sales_missing_columns.csv" in filename
+    assert error == "MissingColumnsError"
+
+
+def test_csv_with_fail_audit(create_csv_file, test_processor):
+    """Test that CSV files that fail audit raise appropriate errors."""
+    create_csv_file("sales_fail_audit.csv", CSV_FAIL_AUDIT)
+
+    test_processor.results.clear()
+
+    # Process the file - should fail during audit
+    test_processor.process_file("sales_fail_audit.csv")
+
+    # Check that processing failed due to audit failure
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is False
+    assert "sales_fail_audit.csv" in filename
+    assert error == "AuditFailedError"

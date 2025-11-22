@@ -13,7 +13,8 @@ from src.exception.exceptions import (
     ValidationThresholdExceededError,
 )
 from src.notify.factory import NotifierFactory
-from src.pipeline.audit.auditor import Auditor
+from src.pipeline.audit.base import BaseAuditor
+from src.pipeline.audit.factory import AuditorFactory
 from src.pipeline.db_utils import (
     db_check_if_duplicate_file,
     db_create_stage_table,
@@ -83,7 +84,7 @@ class PipelineRunner:
             self.log.id,
             self.stage_table_name,
         )
-        self.auditor: Auditor = Auditor(
+        self.auditor: BaseAuditor = AuditorFactory.create_auditor(
             self.file_path,
             self.source,
             self.engine,

@@ -1,4 +1,5 @@
 import logging
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
@@ -6,10 +7,7 @@ from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.exception.exceptions import AuditFailedError, GrainValidationError
-from src.pipeline.db_utils import (
-    db_create_duplicate_grain_examples_sql,
-    db_create_grain_validation_sql,
-)
+from src.pipeline.db_utils import db_create_duplicate_grain_examples_sql
 from src.pipeline.model_utils import get_field_alias
 from src.sources.base import DataSource
 from src.utils import retry
@@ -17,7 +15,7 @@ from src.utils import retry
 logger = logging.getLogger(__name__)
 
 
-class Auditor:
+class BaseAuditor(ABC):
     def __init__(
         self,
         file_path: Path,
@@ -26,13 +24,14 @@ class Auditor:
         stage_table_name: str,
         log_id: int,
     ):
-        self.source: DataSource = source
-        self.stage_table_name: str = stage_table_name
+        self.file_path: Path = file_path
         self.source_filename: str = file_path.name
+        self.stage_table_name: str = stage_table_name
+        self.source: DataSource = source
         self.engine: Engine = engine
-        self.Session: sessionmaker[Session] = sessionmaker(bind=engine)
         self.audit_query: str = source.audit_query
         self.failed_audits: list[str] = []
+        self.Session: sessionmaker[Session] = sessionmaker(bind=engine)
         self.log_id: int = log_id
 
     def _get_duplicate_grain_examples(self, session: Session):
@@ -69,12 +68,16 @@ class Auditor:
             }
         )
 
+    @abstractmethod
+    def create_grain_validation_sql(self) -> str:
+        pass
+
     @retry()
     def audit_grain(self):
         logger.info(
             f"[log_id={self.log_id}] Auditing grain for table {self.stage_table_name}"
         )
-        grain_sql = db_create_grain_validation_sql(self.source)
+        grain_sql = self.create_grain_validation_sql()
         grain_sql = grain_sql.format(table=self.stage_table_name)
         with self.Session() as session:
             result = session.execute(text(grain_sql)).fetchone()
