@@ -240,12 +240,14 @@ class SQLServerWriter(BaseWriter):
         valid_bulk_copy = SqlBulkCopy(conn)
         valid_bulk_copy.DestinationTableName = self.stage_table_name
         valid_bulk_copy.BulkCopyOptions = SqlBulkCopyOptions.TableLock
+        valid_bulk_copy.Timeout = 30
 
         invalid_dt = DataTable()
         invalid_dt.TableName = self.file_load_dlq_table_name
         invalid_bulk_copy = SqlBulkCopy(conn)
         invalid_bulk_copy.DestinationTableName = self.file_load_dlq_table_name
         invalid_bulk_copy.BulkCopyOptions = SqlBulkCopyOptions.TableLock
+        invalid_bulk_copy.Timeout = 30
 
         valid_batch = [None] * self.batch_size
         valid_index = 0
