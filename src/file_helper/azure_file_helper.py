@@ -33,6 +33,17 @@ class AzureChunkedStreamReader:
         self._chunks = download_stream.chunks()
         self._buffer = b""
         self._closed = False
+        self._bytes_downloaded = 0
+        self._last_logged_mb = 0
+        logger.info("Starting Azure Blob download")
+
+    def _log_progress(self, bytes_read: int):
+        """Log download progress every MB."""
+        self._bytes_downloaded += bytes_read
+        current_mb = self._bytes_downloaded / (1024 * 1024)
+        if current_mb >= self._last_logged_mb + 1:
+            logger.debug(f"Downloaded Total: {current_mb:.2f} MB from Azure Blob")
+            self._last_logged_mb = int(current_mb)
 
     def read(self, size=-1):
         """Read bytes from the stream, fetching chunks as needed."""
@@ -44,12 +55,14 @@ class AzureChunkedStreamReader:
             self._buffer = b""
             for chunk in self._chunks:
                 result += chunk
+                self._log_progress(len(chunk))
             return result
 
         while len(self._buffer) < size:
             try:
                 chunk = next(self._chunks)
                 self._buffer += chunk
+                self._log_progress(len(chunk))
             except StopIteration:
                 break
 
@@ -77,6 +90,9 @@ class AzureChunkedStreamReader:
         return self._closed
 
     def close(self):
+        if not self._closed and self._bytes_downloaded > 0:
+            total_mb = self._bytes_downloaded / (1024 * 1024)
+            logger.info(f"Finished downloading {total_mb:.2f} MB from Azure Blob")
         self._closed = True
         if hasattr(self.download_stream, "close"):
             self.download_stream.close()

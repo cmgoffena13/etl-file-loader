@@ -70,6 +70,7 @@ class PipelineRunner:
             self.log.source_filename,
             self.log.started_at,
         )
+        logger.info(f"[log_id={self.log.id}] Processing file: {self.source_filename}")
         self.file_helper: BaseFileHelper = file_helper
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id

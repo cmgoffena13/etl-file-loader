@@ -51,7 +51,7 @@ class BaseWriter(ABC):
                         with self.Session() as session:
                             try:
                                 logger.debug(
-                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table {self.stage_table_name}"
+                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table: {self.stage_table_name}"
                                 )
                                 session.execute(sql_insert_template, valid_records)
                                 session.commit()
@@ -61,7 +61,7 @@ class BaseWriter(ABC):
                                 valid_index = 0
                             except Exception as e:
                                 logger.exception(
-                                    f"Error inserting records into stage table {self.stage_table_name}: {e}"
+                                    f"Error inserting records into stage table: {self.stage_table_name}: {e}"
                                 )
                                 session.rollback()
                                 raise e
@@ -94,7 +94,7 @@ class BaseWriter(ABC):
                 with self.Session() as session:
                     try:
                         logger.debug(
-                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table {self.stage_table_name}"
+                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
                         )
                         session.execute(
                             sql_insert_template, valid_records[:valid_index]
