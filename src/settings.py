@@ -51,6 +51,23 @@ class GlobalConfig(BaseConfig):
     # Slack notification settings
     SLACK_WEBHOOK_URL: Optional[str] = None
 
+    # AWS S3 settings
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_SESSION_TOKEN: Optional[str] = None  # For temporary credentials
+    AWS_REGION: Optional[str] = None  # Defaults to boto3's default region chain
+
+    # Azure Blob Storage settings
+    AZURE_STORAGE_CONNECTION_STRING: Optional[str] = None
+    AZURE_STORAGE_ACCOUNT_URL: Optional[str] = None
+    AZURE_STORAGE_ACCOUNT_NAME: Optional[str] = None
+    AZURE_STORAGE_ACCOUNT_KEY: Optional[str] = None
+
+    # GCP Cloud Storage settings
+    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = (
+        None  # Path to service account JSON file
+    )
+
     @field_validator(
         "DIRECTORY_PATH", "ARCHIVE_PATH", "DUPLICATE_FILES_PATH", mode="before"
     )
@@ -58,7 +75,12 @@ class GlobalConfig(BaseConfig):
     def convert_path(cls, v):
         if isinstance(v, Path):
             return v
-        return Path(v) if v else v
+        if not v:
+            return v
+        v_str = str(v)
+        if v_str.startswith(("s3://", "gs://", "azure://", "https://")):
+            return v_str
+        return Path(v_str)
 
     OTEL_PYTHON_LOG_CORRELATION: Optional[bool] = None
     OPEN_TELEMETRY_LOG_ENDPOINT: Optional[str] = None

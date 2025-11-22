@@ -36,13 +36,12 @@ class AWSFileHelper(BaseFileHelper):
         return bucket, key
 
     @classmethod
-    def _get_s3_client(cls, client=None):
-        if client is not None:
-            cls._s3_client = client
-            return client
-
+    def _get_s3_client(cls):
         if cls._s3_client is None:
-            cls._s3_client = boto3.client("s3")
+            client_kwargs = {}
+            if config.AWS_REGION:
+                client_kwargs["region_name"] = config.AWS_REGION
+            cls._s3_client = boto3.client("s3", **client_kwargs)
 
         return cls._s3_client
 

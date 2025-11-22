@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
@@ -19,6 +20,9 @@ from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
 
+if config.GOOGLE_APPLICATION_CREDENTIALS:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = config.GOOGLE_APPLICATION_CREDENTIALS
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,13 +40,12 @@ class GCPFileHelper(BaseFileHelper):
         return bucket, blob_name
 
     @classmethod
-    def _get_storage_client(cls, client=None):
-        if client is not None:
-            cls._storage_client = client
-            return client
-
+    def _get_storage_client(cls):
         if cls._storage_client is None:
-            cls._storage_client = storage.Client()
+            client_kwargs = {}
+            if config.GCP_PROJECT_ID:
+                client_kwargs["project"] = config.GCP_PROJECT_ID
+            cls._storage_client = storage.Client(**client_kwargs)
 
         return cls._storage_client
 

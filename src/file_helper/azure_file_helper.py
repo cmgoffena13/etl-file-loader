@@ -57,28 +57,38 @@ class AzureFileHelper(BaseFileHelper):
             return client
 
         if cls._blob_service_client is None:
-            connection_string = getattr(config, "AZURE_STORAGE_CONNECTION_STRING", None)
-            if connection_string:
+            # Priority 1: Connection string
+            if config.AZURE_STORAGE_CONNECTION_STRING:
                 cls._blob_service_client = BlobServiceClient.from_connection_string(
-                    connection_string
+                    config.AZURE_STORAGE_CONNECTION_STRING
                 )
                 return cls._blob_service_client
 
-            account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
-            account_key = getattr(config, "AZURE_STORAGE_ACCOUNT_KEY", None)
-            if account_name and account_key:
-                credential = AzureNamedKeyCredential(account_name, account_key)
+            # Priority 2: Account name + key
+            if config.AZURE_STORAGE_ACCOUNT_NAME and config.AZURE_STORAGE_ACCOUNT_KEY:
+                credential = AzureNamedKeyCredential(
+                    config.AZURE_STORAGE_ACCOUNT_NAME, config.AZURE_STORAGE_ACCOUNT_KEY
+                )
+                # Use AZURE_STORAGE_ACCOUNT_URL if provided, otherwise construct from account name
+                account_url = (
+                    config.AZURE_STORAGE_ACCOUNT_URL
+                    or f"https://{config.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
+                )
                 cls._blob_service_client = BlobServiceClient(
-                    account_url=f"https://{account_name}.blob.core.windows.net",
+                    account_url=account_url,
                     credential=credential,
                 )
                 return cls._blob_service_client
 
-            # Try default credential chain (Managed Identity, etc.)
-            account_name = getattr(config, "AZURE_STORAGE_ACCOUNT_NAME", None)
-            if account_name:
+            # Priority 3: Default credential chain (Managed Identity, etc.)
+            if config.AZURE_STORAGE_ACCOUNT_NAME:
+                # Use AZURE_STORAGE_ACCOUNT_URL if provided, otherwise construct from account name
+                account_url = (
+                    config.AZURE_STORAGE_ACCOUNT_URL
+                    or f"https://{config.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
+                )
                 cls._blob_service_client = BlobServiceClient(
-                    account_url=f"https://{account_name}.blob.core.windows.net",
+                    account_url=account_url,
                     credential=DefaultAzureCredential(),
                 )
                 return cls._blob_service_client
