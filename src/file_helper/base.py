@@ -66,6 +66,29 @@ class BaseFileHelper(ABC):
         pass
 
     @classmethod
+    def is_file_compressed(cls, file_path: Union[Path, str]) -> bool:
+        """
+        Check if a file is actually compressed (not just by extension).
+
+        For local storage: checks file extension
+        For cloud storage: may check Content-Encoding headers
+
+        Returns:
+            True if file is compressed and needs decompression, False otherwise
+        """
+        if isinstance(file_path, str):
+            filename = file_path.split("/")[-1].split("?")[0].split("#")[0]
+            path_obj = Path(filename)
+        else:
+            path_obj = file_path
+
+        # Check if file has .gz extension (e.g., file.csv.gz)
+        has_gz_extension = (
+            len(path_obj.suffixes) >= 2 and path_obj.suffixes[-1].lower() == ".gz"
+        )
+        return has_gz_extension
+
+    @classmethod
     @abstractmethod
     @contextmanager
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):

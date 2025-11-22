@@ -16,7 +16,7 @@ class Transaction(TableModel):
 
 
 SALES = CSVSource(
-    file_pattern="sales_*.csv",
+    file_pattern="sales_*.csv.gz",
     source_model=Transaction,
     table_name="transactions",
     grain=["transaction_id"],

@@ -197,6 +197,30 @@ class AWSFileHelper(BaseFileHelper):
         return f"{directory_uri}/{filename}"
 
     @classmethod
+    def is_file_compressed(cls, file_path: Union[Path, str]) -> bool:
+        """Check if S3 object is actually compressed by checking actual stream bytes."""
+        if isinstance(file_path, Path):
+            raise ValueError("AWSFileHelper requires S3 URI, not local Path")
+
+        if not super().is_file_compressed(file_path):
+            return False
+
+        bucket, key = cls._parse_s3_uri(str(file_path))
+        s3_client = cls._get_s3_client()
+
+        try:
+            response = s3_client.get_object(Bucket=bucket, Key=key)
+            stream = response["Body"]
+            first_bytes = stream.read(2)
+            stream.close()
+
+            # Gzip files start with 0x1f 0x8b
+            is_compressed = first_bytes == b"\x1f\x8b"
+            return is_compressed
+        except ClientError:
+            return True
+
+    @classmethod
     @contextmanager
     @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):

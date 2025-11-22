@@ -39,10 +39,7 @@ class CSVReader(BaseReader):
     def _get_file_stream(self, mode: str = "rb"):
         """Get file stream context manager for CSV reading. Converts binary to text."""
         with super()._get_file_stream("rb") as stream:
-            if self.is_gzipped:
-                yield gzip.open(stream, "rt", encoding=self.encoding)
-            else:
-                yield io.TextIOWrapper(stream, encoding=self.encoding, newline="")
+            yield io.TextIOWrapper(stream, encoding=self.encoding, newline="")
 
     def read(self) -> Iterator[list[Dict[str, Any]]]:
         with self._get_file_stream() as csvfile:

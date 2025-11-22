@@ -21,17 +21,10 @@ class BaseReader(ABC):
         self.source: DataSource = source
         self.log_id: int = log_id
         self.source_filename: str = get_file_name(file_path)
-        if isinstance(file_path, str):
-            filename = file_path.split("/")[-1].split("?")[0].split("#")[0]
-            path_obj = Path(filename)
-        else:
-            path_obj = file_path
-        self.is_gzipped: bool = (
-            len(path_obj.suffixes) >= 2 and path_obj.suffixes[-1].lower() == ".gz"
-        )
         self.batch_size: int = config.BATCH_SIZE
         self.rows_read: int = 0
         self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
+        self.is_gzipped: bool = self.file_helper.is_file_compressed(file_path)
 
     @contextmanager
     def _get_file_stream(self, mode: str = "rb"):
