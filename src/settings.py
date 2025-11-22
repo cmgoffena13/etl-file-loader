@@ -68,6 +68,15 @@ class GlobalConfig(BaseConfig):
 
     SQL_SERVER_SQLBULKCOPY_FLAG: bool = False
 
+    FILE_HELPER_PLATFORM: str = "default"
+
+    @field_validator("FILE_HELPER_PLATFORM", mode="before")
+    @classmethod
+    def lowercase_file_helper_platform(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class DevConfig(GlobalConfig):
     DIRECTORY_PATH: Path = Path("src/tests/test_directory")

@@ -12,6 +12,8 @@ from src.exception.exceptions import (
     DuplicateFileError,
     ValidationThresholdExceededError,
 )
+from src.file_helper.base import BaseFileHelper
+from src.file_helper.factory import FileHelperFactory
 from src.notify.factory import NotifierFactory
 from src.pipeline.audit.base import BaseAuditor
 from src.pipeline.audit.factory import AuditorFactory
@@ -30,7 +32,6 @@ from src.pipeline.read.factory import ReaderFactory
 from src.pipeline.validate.validator import Validator
 from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.factory import WriterFactory
-from src.process.file_helper import FileHelper
 from src.process.log import FileLoadLog
 from src.sources.base import DataSource
 from src.utils import get_error_location, retry
@@ -104,6 +105,7 @@ class PipelineRunner:
             self.log.id,
             self.file_load_dlq_table,
         )
+        self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
 
     @retry()
     def _log_update(self, log: FileLoadLog) -> None:
@@ -124,7 +126,7 @@ class PipelineRunner:
             logger.warning(
                 f"[log_id={self.log.id}] File {self.source_filename} has already been processed"
             )
-            FileHelper.copy_file_to_duplicate_files(self.file_path)
+            self.file_helper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
             self._log_update(self.log)
             raise DuplicateFileError(
@@ -137,7 +139,7 @@ class PipelineRunner:
     def archive_file(self) -> None:
         self.log.archive_copy_started_at = pendulum.now("UTC")
 
-        FileHelper.copy_file_to_archive(self.file_path)
+        self.file_helper.copy_file_to_archive(self.file_path)
 
         self.log.archive_copy_ended_at = pendulum.now("UTC")
         self.log.archive_copy_success = True
@@ -204,7 +206,7 @@ class PipelineRunner:
 
     def cleanup(self) -> None:
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
-        FileHelper.delete_file(self.reader.file_path)
+        self.file_helper.delete_file(self.reader.file_path)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
         with tracer.start_as_current_span(
@@ -262,7 +264,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
-                FileHelper.delete_file(self.reader.file_path)
+                self.file_helper.delete_file(self.reader.file_path)
             return self.result
 
     def __del__(self):

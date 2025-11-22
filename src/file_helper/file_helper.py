@@ -12,12 +12,13 @@ from src.exception.exceptions import (
     FileDeleteError,
     FileMoveError,
 )
+from src.file_helper.base import BaseFileHelper
 from src.settings import config
 
 logger = logging.getLogger(__name__)
 
 
-class FileHelper:
+class FileHelper(BaseFileHelper):
     @classmethod
     def scan_directory(cls, directory_path: Path) -> Queue:
         if not directory_path.exists():

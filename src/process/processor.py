@@ -5,13 +5,14 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Optional
 
-from sqlalchemy import Engine, MetaData, Table
+from sqlalchemy import Table
 
+from src.file_helper.base import BaseFileHelper
+from src.file_helper.factory import FileHelperFactory
 from src.notify.factory import NotifierFactory
 from src.notify.slack import AlertLevel
 from src.pipeline.runner import PipelineRunner
 from src.process.db import create_tables, setup_db
-from src.process.file_helper import FileHelper
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
@@ -23,7 +24,10 @@ class Processor:
         self.thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(
             max_workers=multiprocessing.cpu_count()
         )
-        self.file_paths_queue: Queue = FileHelper.scan_directory(config.DIRECTORY_PATH)
+        self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
+        self.file_paths_queue: Queue = self.file_helper.scan_directory(
+            config.DIRECTORY_PATH
+        )
         self.engine, self.metadata = setup_db()
         create_tables(self.metadata, self.engine)
         self.file_load_log_table: Table = self.metadata.tables["file_load_log"]
@@ -49,7 +53,7 @@ class Processor:
             result = runner.run()
             self.results.append(result)
         else:
-            FileHelper.copy_file_to_archive(file_path)
+            self.file_helper.copy_file_to_archive(file_path)
             self.results.append(
                 (False, file_name, f"No source found for file {file_name}")
             )
