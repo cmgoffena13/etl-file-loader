@@ -22,6 +22,67 @@ from src.utils import retry
 logger = logging.getLogger(__name__)
 
 
+class AWSStreamingBodyWrapper:
+    """File-like wrapper for boto3 StreamingBody that tracks download progress."""
+
+    def __init__(self, streaming_body):
+        self.streaming_body = streaming_body
+        self._closed = False
+        self._bytes_downloaded = 0
+        self._last_logged_mb = 0
+        logger.info("Starting S3 object download")
+
+    def read(self, size=-1):
+        """Read bytes from the stream, tracking progress."""
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        data = self.streaming_body.read(size)
+        if data:
+            self._log_progress(len(data))
+        return data
+
+    def _log_progress(self, bytes_read: int):
+        """Log download progress every 4MB."""
+        self._bytes_downloaded += bytes_read
+        current_mb = self._bytes_downloaded / (1024 * 1024)
+        if current_mb >= self._last_logged_mb + 4:
+            logger.debug(f"Downloaded Total: {current_mb:.2f} MB from S3")
+            self._last_logged_mb = int(current_mb // 4) * 4
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
+
+    @property
+    def closed(self):
+        """Property expected by TextIOWrapper."""
+        return self._closed
+
+    def close(self):
+        if not self._closed and self._bytes_downloaded > 0:
+            total_mb = self._bytes_downloaded / (1024 * 1024)
+            logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+        self._closed = True
+        if hasattr(self.streaming_body, "close"):
+            self.streaming_body.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __getattr__(self, name):
+        """Delegate other attributes to the underlying StreamingBody."""
+        return getattr(self.streaming_body, name)
+
+
 class AWSFileHelper(BaseFileHelper):
     _s3_client = None
 
@@ -236,7 +297,8 @@ class AWSFileHelper(BaseFileHelper):
 
         try:
             response = s3_client.get_object(Bucket=bucket, Key=key)
-            yield response["Body"]
+            # Wrap StreamingBody to track download progress
+            yield AWSStreamingBodyWrapper(response["Body"])
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "NoSuchKey":
