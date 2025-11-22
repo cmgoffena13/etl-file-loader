@@ -9,7 +9,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from src.settings import ProdConfig, config
+from src.settings import config
 
 
 def setup_logging():
