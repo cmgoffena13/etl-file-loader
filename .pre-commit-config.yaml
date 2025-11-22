@@ -29,6 +29,6 @@ repos:
         entry: uv run -- pytest -v -n auto
         language: system
         types: [python]
-        pass_filenames: false
+        pass_filenames: true
         stages: [pre-push]
         files: ^src/.*\.py$
