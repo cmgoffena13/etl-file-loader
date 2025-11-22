@@ -248,7 +248,7 @@ class PipelineRunner:
                     self.result = (
                         False,
                         self.source_filename,
-                        str(e),
+                        type(e).__name__,
                     )
                 else:
                     error_location = get_error_location(e)

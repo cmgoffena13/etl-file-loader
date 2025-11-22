@@ -126,7 +126,7 @@ class Validator:
                 yield batch_results[:batch_index]
         if self.records_validated > 0 and self.validation_errors > 0:
             error_rate = self.validation_errors / self.records_validated
-            if error_rate > self.source.validation_error_threshold:
+            if error_rate >= self.source.validation_error_threshold:
                 truncated_error_rate = round(error_rate, 2)
                 sample_errors_str = "Sample validation failure records:\n" + "\n".join(
                     f"Row {err['file_row_number']}: {err['validation_error']} - Record: {err['record']}"

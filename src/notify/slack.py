@@ -59,7 +59,7 @@ class SlackNotifier(BaseNotifier):
         webhook = WebhookClient(config.SLACK_WEBHOOK_URL)
         response = webhook.send(text=self.slack_message)
         if response.status_code == 200:
-            logger.info("Sent Slack notification for internal processing error")
+            logger.info("Sent Slack notification for failure(s) to process file(s)")
         else:
             raise Exception(
                 f"Slack webhook returned status {response.status_code}: {response.body}"

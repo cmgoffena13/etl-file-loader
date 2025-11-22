@@ -25,7 +25,7 @@ TEST_CSV_SOURCE = CSVSource(
     delimiter=",",
     encoding="utf-8",
     skip_rows=0,
-    validation_error_threshold=1.0,  # Allow 100% error rate to capture all errors in DLQ
+    validation_error_threshold=0.0,  # Fail on any validation errors
 )
 
 
@@ -47,6 +47,7 @@ TEST_EXCEL_SOURCE = ExcelSource(
     grain=["sku"],
     sheet_name=None,
     skip_rows=0,
+    validation_error_threshold=0.0,
 )
 
 
@@ -67,5 +68,5 @@ TEST_JSON_SOURCE = JSONSource(
     table_name="ledger_entries",
     grain=["entry_id"],
     array_path="entries.item",
-    skip_rows=0,
+    validation_error_threshold=0.0,
 )
