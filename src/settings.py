@@ -75,8 +75,6 @@ class GlobalConfig(BaseConfig):
     def convert_path(cls, v):
         if isinstance(v, Path):
             return v
-        if not v:
-            return v
         v_str = str(v)
         if v_str.startswith(("s3://", "gs://", "azure://", "https://")):
             return v_str
