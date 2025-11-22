@@ -238,11 +238,17 @@ class PipelineRunner:
                             **error_values,
                         )
                         email_notifier.notify()
-                    # Success since email notification was sent
+                        # Success since email notification was sent
+                        self.result = (
+                            True,
+                            self.source_filename,
+                            None,
+                        )
+                    # Failure since email notification was not sent
                     self.result = (
-                        True,
+                        False,
                         self.source_filename,
-                        None,
+                        str(e),
                     )
                 else:
                     error_location = get_error_location(e)

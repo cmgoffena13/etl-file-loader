@@ -15,8 +15,6 @@ from src.process.file_helper import FileHelper
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
-engine, metadata = setup_db()
-
 logger = logging.getLogger(__name__)
 
 
@@ -26,8 +24,7 @@ class Processor:
             max_workers=multiprocessing.cpu_count()
         )
         self.file_paths_queue: Queue = FileHelper.scan_directory(config.DIRECTORY_PATH)
-        self.engine: Engine = engine
-        self.metadata: MetaData = metadata
+        self.engine, self.metadata = setup_db()
         create_tables(self.metadata, self.engine)
         self.file_load_log_table: Table = self.metadata.tables["file_load_log"]
         self.file_load_dlq_table: Table = self.metadata.tables["file_load_dlq"]
