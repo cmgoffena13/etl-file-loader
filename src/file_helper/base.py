@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
 from typing import Union
@@ -61,5 +62,24 @@ class BaseFileHelper(ABC):
 
         For local storage: returns Path(directory_path / filename)
         For cloud storage: returns URI string (e.g., 's3://bucket/path/filename.csv')
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    @contextmanager
+    def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
+        """
+        Get a file-like object (context manager) for reading from cloud or local storage.
+
+        For local storage: returns open() context manager
+        For cloud storage: returns stream from cloud SDK (also a context manager)
+
+        Args:
+            file_path: Path object for local files, URI string for cloud files
+            mode: File mode ('rb' for binary, 'r' for text, etc.)
+
+        Yields:
+            A file-like object that can be used with standard file operations
         """
         pass

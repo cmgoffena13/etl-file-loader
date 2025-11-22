@@ -2,7 +2,7 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,9 +25,9 @@ class BaseConfig(BaseSettings):
 
 class GlobalConfig(BaseConfig):
     DATABASE_URL: str
-    DIRECTORY_PATH: Path
-    ARCHIVE_PATH: Path
-    DUPLICATE_FILES_PATH: Path
+    DIRECTORY_PATH: Union[Path, str]
+    ARCHIVE_PATH: Union[Path, str]
+    DUPLICATE_FILES_PATH: Union[Path, str]
 
     BATCH_SIZE: int = 10000
     LOG_LEVEL: str = "INFO"

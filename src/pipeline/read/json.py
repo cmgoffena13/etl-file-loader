@@ -1,5 +1,6 @@
 import gzip
 import logging
+from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
 from pathlib import Path
@@ -73,9 +74,7 @@ class JSONReader(BaseReader):
         Flattening preserves JSON key structure (e.g., nested {"Entry": {"ID": 1}}
         becomes "Entry_ID"), so JSON structure should align with model expectations.
         """
-        file_opener = gzip.open if self.is_gzipped else open
-
-        with file_opener(self.file_path, "rb") as file:
+        with self._get_file_stream("rb") as file:
             objects = ijson.items(file, self.array_path)
 
             try:

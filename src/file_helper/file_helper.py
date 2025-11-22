@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
 
@@ -67,3 +68,9 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def get_file_path(cls, directory_path: Path, filename: str) -> Path:
         return Path(directory_path / filename)
+
+    @classmethod
+    @contextmanager
+    def get_file_stream(cls, file_path: Path, mode: str = "rb"):
+        with open(file_path, mode) as f:
+            yield f

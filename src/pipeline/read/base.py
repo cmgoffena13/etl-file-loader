@@ -1,5 +1,7 @@
+import gzip
 import logging
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
@@ -17,14 +19,20 @@ class BaseReader(ABC):
         self.file_path: Path = file_path
         self.source: DataSource = source
         self.log_id: int = log_id
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {self.file_path}")
         self.is_gzipped: bool = (
             len(file_path.suffixes) >= 2 and file_path.suffixes[-1].lower() == ".gz"
         )
         self.batch_size: int = config.BATCH_SIZE
         self.rows_read: int = 0
         self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
+
+    @contextmanager
+    def _get_file_stream(self, mode: str = "rb"):
+        with self.file_helper.get_file_stream(self.file_path, mode) as stream:
+            if self.is_gzipped:
+                yield gzip.open(stream, mode)
+            else:
+                yield stream
 
     def _validate_fields(self, actual_fields: set) -> None:
         actual_file_fields = set(field.lower() for field in actual_fields)
@@ -51,7 +59,7 @@ class BaseReader(ABC):
             )
 
     @abstractmethod
-    def read(self) -> Iterator[Dict[str, Any]]:
+    def read(self) -> Iterator[list[Dict[str, Any]]]:
         pass
 
     @property

@@ -80,6 +80,10 @@ class ExcelReader(BaseReader):
                 converted_record[key] = value
         return converted_record
 
+    def _get_file_stream(self, mode: str = "rb"):
+        # Not needed for Excel
+        pass
+
     def read(self) -> Iterator[list[Dict[str, Any]]]:
         records = pyexcel.iget_records(
             file_name=str(self.file_path),

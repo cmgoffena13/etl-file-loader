@@ -1,6 +1,8 @@
 import csv
 import gzip
+import io
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
@@ -33,13 +35,17 @@ class CSVReader(BaseReader):
         """CSV: Row 1 = header, so starting row = 2 + skip_rows."""
         return 2 + self.skip_rows
 
-    def read(self) -> Iterator[list[Dict[str, Any]]]:
-        file_opener = gzip.open if self.is_gzipped else open
-        file_mode = "rt" if self.is_gzipped else "r"
+    @contextmanager
+    def _get_file_stream(self, mode: str = "rb"):
+        """Get file stream context manager for CSV reading. Converts binary to text."""
+        with super()._get_file_stream("rb") as stream:
+            if self.is_gzipped:
+                yield gzip.open(stream, "rt", encoding=self.encoding)
+            else:
+                yield io.TextIOWrapper(stream, encoding=self.encoding, newline="")
 
-        with file_opener(
-            self.file_path, file_mode, encoding=self.encoding, newline=""
-        ) as csvfile:
+    def read(self) -> Iterator[list[Dict[str, Any]]]:
+        with self._get_file_stream() as csvfile:
             reader = csv.DictReader(csvfile, delimiter=self.delimiter)
 
             if not reader.fieldnames:
