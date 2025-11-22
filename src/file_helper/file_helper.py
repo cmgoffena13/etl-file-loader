@@ -66,13 +66,13 @@ class FileHelper(BaseFileHelper):
     @classmethod
     def delete_file(cls, file_path: Path) -> None:
         try:
-            logger.info(f"Deleting file: {file_path}")
+            logger.info(f"Deleting file: {file_path.name}")
             file_path.unlink()
         except FileNotFoundError:
             pass
         except Exception as e:
-            logger.error(f"Failed to delete file {file_path}: {e}")
-            raise FileDeleteError(f"Failed to delete file {file_path}: {e}")
+            logger.error(f"Failed to delete file {file_path.name}: {e}")
+            raise FileDeleteError(f"Failed to delete file {file_path.name}: {e}")
 
     @classmethod
     def get_file_path(cls, directory_path: Path, filename: str) -> Path:

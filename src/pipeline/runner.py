@@ -81,31 +81,31 @@ class PipelineRunner:
             self.file_path, self.source, self.reader.starting_row_number, self.log.id
         )
         self.writer: BaseWriter = WriterFactory.create_writer(
-            self.source,
-            self.engine,
-            self.file_load_dlq_table,
-            self.log.id,
-            self.stage_table_name,
+            source=self.source,
+            engine=self.engine,
+            file_load_dlq_table=self.file_load_dlq_table,
+            log_id=self.log.id,
+            stage_table_name=self.stage_table_name,
         )
         self.auditor: BaseAuditor = AuditorFactory.create_auditor(
-            self.file_path,
-            self.source,
-            self.engine,
-            self.stage_table_name,
-            self.log.id,
+            file_path=self.file_path,
+            source=self.source,
+            engine=self.engine,
+            stage_table_name=self.stage_table_name,
+            log_id=self.log.id,
         )
         self.publisher: BasePublisher = PublisherFactory.create_publisher(
-            self.source,
-            self.engine,
-            self.log.id,
-            self.stage_table_name,
-            self.writer.rows_written_to_stage,
+            source=self.source,
+            engine=self.engine,
+            log_id=self.log.id,
+            stage_table_name=self.stage_table_name,
+            rows_written_to_stage=self.writer.rows_written_to_stage,
         )
         self.deleter: BaseDeleter = DeleterFactory.create_deleter(
-            self.source_filename,
-            self.engine,
-            self.log.id,
-            self.file_load_dlq_table,
+            source_filename=self.source_filename,
+            engine=self.engine,
+            log_id=self.log.id,
+            file_load_dlq_table=self.file_load_dlq_table,
         )
 
     @retry()
