@@ -149,7 +149,7 @@ def _initialize_dotnet_runtime():
             load(runtime)
             logger.debug(f"Initialized .NET runtime: {runtime}")
         except Exception as e:
-            # Log but don't fail - sqlserver.py will handle the error when actually used
+            # Log but don't fail, will handle the error when actually used
             logger.warning(f"Failed to initialize .NET runtime at startup: {e}")
 
 
