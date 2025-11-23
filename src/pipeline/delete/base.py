@@ -73,4 +73,7 @@ class BaseDeleter(ABC):
     def delete(self):
         existing_dlq = self._check_if_dlq_records_exist()
         if existing_dlq:
+            logger.info(
+                f"[log_id={self.log_id}] Deleting DLQ records for file: {self.source_filename}"
+            )
             self._batch_delete_dlq_records()

@@ -199,15 +199,9 @@ class PipelineRunner:
         self._log_update(self.log)
 
     def cleanup_dlq_records(self) -> None:
-        logger.info(
-            f"[log_id={self.log.id}] Cleaning up DLQ records from file (If Applicable): {self.source_filename}"
-        )
         self.deleter.delete()
 
     def cleanup(self) -> None:
-        logger.info(
-            f"[log_id={self.log.id}] Cleaning up stage table: {self.stage_table_name}"
-        )
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
