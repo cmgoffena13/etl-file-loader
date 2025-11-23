@@ -67,7 +67,7 @@ class BaseAuditor(ABC):
             duplicate_examples
         )
         logger.error(
-            f"[log_id={self.log_id}] Grain validation failed for table {self.stage_table_name}"
+            f"[log_id={self.log_id}] Grain validation failed for table: {self.stage_table_name}"
         )
         raise GrainValidationError(
             error_values={
@@ -84,7 +84,7 @@ class BaseAuditor(ABC):
     @retry()
     def audit_grain(self):
         logger.info(
-            f"[log_id={self.log_id}] Auditing grain for table {self.stage_table_name}"
+            f"[log_id={self.log_id}] Auditing grain for table: {self.stage_table_name}"
         )
         grain_sql = self.create_grain_validation_sql()
         grain_sql = grain_sql.format(table=self.stage_table_name)
@@ -98,13 +98,13 @@ class BaseAuditor(ABC):
     def audit_data(self):
         if self.audit_query is None:
             logger.warning(
-                f"[log_id={self.log_id}] No audit query found for source {self.source.table_name}"
+                f"[log_id={self.log_id}] No audit query found for source: {self.source.table_name}"
             )
             return
 
         with self.Session() as session:
             logger.info(
-                f"[log_id={self.log_id}] Auditing data for table {self.stage_table_name}"
+                f"[log_id={self.log_id}] Auditing data for table: {self.stage_table_name}"
             )
             audit_sql = text(
                 self.audit_query.format(table=self.stage_table_name).strip()

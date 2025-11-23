@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Union
 
 import pendulum
-from opentelemetry import trace
 from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -36,7 +35,6 @@ from src.sources.base import DataSource
 from src.utils import get_error_location, get_file_name, retry
 
 logger = logging.getLogger(__name__)
-tracer = trace.get_tracer(__name__)
 
 
 class PipelineRunner:
@@ -201,72 +199,75 @@ class PipelineRunner:
         self._log_update(self.log)
 
     def cleanup_dlq_records(self) -> None:
+        logger.info(
+            f"[log_id={self.log.id}] Cleaning up DLQ records from file (If Applicable): {self.source_filename}"
+        )
         self.deleter.delete()
 
     def cleanup(self) -> None:
+        logger.info(
+            f"[log_id={self.log.id}] Cleaning up stage table: {self.stage_table_name}"
+        )
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
-        with tracer.start_as_current_span(
-            f"[log_id={self.log.id}] {self.source_filename}"
-        ):
-            self.check_if_processed()
-            self.archive_file()
-            # Need to archive before finally delete to ensure file is not lost
-            try:
-                self.write_data(self.validate_data(self.read_data()))
-                self.audit_data()
-                self.publish_data()
-                self.cleanup_dlq_records()
-                self.cleanup()
-                self.log.ended_at = pendulum.now("UTC")
-                self.log.success = True
-                self.result = (True, self.source_filename, None)
-                logger.info(
-                    f"[log_id={self.log.id}] Pipeline completed successfully for file:  {self.source_filename}"
+        self.check_if_processed()
+        self.archive_file()
+        # Need to archive before finally delete to ensure file is not lost
+        try:
+            self.write_data(self.validate_data(self.read_data()))
+            self.audit_data()
+            self.publish_data()
+            self.cleanup_dlq_records()
+            self.cleanup()
+            self.log.ended_at = pendulum.now("UTC")
+            self.log.success = True
+            self.result = (True, self.source_filename, None)
+            logger.info(
+                f"[log_id={self.log.id}] Pipeline completed successfully for file:  {self.source_filename}"
+            )
+        except Exception as e:
+            self.log.success = None if isinstance(e, DuplicateFileError) else False
+            self.log.error_type = type(e).__name__
+            if isinstance(e, BaseFileErrorEmailException):
+                if isinstance(e, ValidationThresholdExceededError):
+                    self.log.validation_errors = self.validator.validation_errors
+                if self.reader.source.notification_emails:
+                    error_values = getattr(e, "error_values", {})
+                    notifier = NotifierFactory.get_notifier("email")
+                    email_notifier = notifier(
+                        source_filename=self.source_filename,
+                        log_id=self.log.id,
+                        exception=e,
+                        recipient_emails=self.reader.source.notification_emails,
+                        **error_values,
+                    )
+                    email_notifier.notify()
+                    # Success since email notification was sent
+                    self.result = (
+                        True,
+                        self.source_filename,
+                        None,
+                    )
+                # Failure since email notification was not sent
+                self.result = (
+                    False,
+                    self.source_filename,
+                    type(e).__name__,
                 )
-            except Exception as e:
-                self.log.success = None if isinstance(e, DuplicateFileError) else False
-                self.log.error_type = type(e).__name__
-                if isinstance(e, BaseFileErrorEmailException):
-                    if isinstance(e, ValidationThresholdExceededError):
-                        self.log.validation_errors = self.validator.validation_errors
-                    if self.reader.source.notification_emails:
-                        error_values = getattr(e, "error_values", {})
-                        notifier = NotifierFactory.get_notifier("email")
-                        email_notifier = notifier(
-                            source_filename=self.source_filename,
-                            log_id=self.log.id,
-                            exception=e,
-                            recipient_emails=self.reader.source.notification_emails,
-                            **error_values,
-                        )
-                        email_notifier.notify()
-                        # Success since email notification was sent
-                        self.result = (
-                            True,
-                            self.source_filename,
-                            None,
-                        )
-                    # Failure since email notification was not sent
-                    self.result = (
-                        False,
-                        self.source_filename,
-                        type(e).__name__,
-                    )
-                else:
-                    error_location = get_error_location(e)
-                    logger.exception(
-                        f"Error running pipeline for file {self.source_filename}: {e} at {error_location}"
-                    )
-                    self.result = (
-                        False,
-                        self.source_filename,
-                        f"{str(e)} at {error_location}",
-                    )
-            finally:
-                self.file_helper.delete_file(self.file_path)
-            return self.result
+            else:
+                error_location = get_error_location(e)
+                logger.exception(
+                    f"Error running pipeline for file {self.source_filename}: {e} at {error_location}"
+                )
+                self.result = (
+                    False,
+                    self.source_filename,
+                    f"{str(e)} at {error_location}",
+                )
+        finally:
+            self.file_helper.delete_file(self.file_path)
+        return self.result
 
     def __del__(self):
         pass

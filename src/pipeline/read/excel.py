@@ -124,6 +124,7 @@ class ExcelReader(BaseReader):
 
         batch = [None] * self.batch_size
         batch_index = 0
+        logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
         for index, record in enumerate(all_records, start=1):
             if index <= self.skip_rows:
                 continue

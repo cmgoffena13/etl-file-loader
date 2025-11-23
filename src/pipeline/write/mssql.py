@@ -257,6 +257,9 @@ class SQLServerWriter(BaseWriter):
         invalid_column_order = None
         try:
             conn.Open()
+            logger.info(
+                f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name}"
+            )
             for batch in batches:
                 for passed, record in batch:
                     if passed:

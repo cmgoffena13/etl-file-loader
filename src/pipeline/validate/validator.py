@@ -98,6 +98,9 @@ class Validator:
         self, batches: Iterator[list[Dict[str, Any]]]
     ) -> Iterator[list[tuple[bool, Dict[str, Any]]]]:
         total_records = 0
+        logger.info(
+            f"[log_id={self.log_id}] Validating data from file: {self.source_filename}"
+        )
         for batch in batches:
             batch_results = [None] * self.batch_size
             batch_index = 0

@@ -42,6 +42,9 @@ class BaseWriter(ABC):
         valid_records = [None] * self.batch_size
         valid_index = 0
         invalid_records = []
+        logger.info(
+            f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name}"
+        )
         for batch in batches:
             for passed, record in batch:
                 if passed:

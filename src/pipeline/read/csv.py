@@ -59,6 +59,7 @@ class CSVReader(BaseReader):
 
             batch = [None] * self.batch_size
             batch_index = 0
+            logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
             for index, row in enumerate(reader):
                 if index < self.skip_rows:
                     continue

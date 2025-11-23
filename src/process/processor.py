@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Empty, Queue
 from typing import Optional
 
+from opentelemetry import trace
 from sqlalchemy import Table
 
 from src.file_helper.base import BaseFileHelper
@@ -16,6 +17,7 @@ from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class Processor:
@@ -41,17 +43,18 @@ class Processor:
             logger.exception(f"Error finding source for file {file_name}: {e}")
             self.results.append((False, file_name, str(e)))
         if source is not None:
-            runner = PipelineRunner(
-                file_path=file_path,
-                source=source,
-                engine=self.engine,
-                metadata=self.metadata,
-                file_load_log_table=self.file_load_log_table,
-                file_load_dlq_table=self.file_load_dlq_table,
-                file_helper=self.file_helper,
-            )
-            result = runner.run()
-            self.results.append(result)
+            with tracer.start_as_current_span(f"File: {file_name}"):
+                runner = PipelineRunner(
+                    file_path=file_path,
+                    source=source,
+                    engine=self.engine,
+                    metadata=self.metadata,
+                    file_load_log_table=self.file_load_log_table,
+                    file_load_dlq_table=self.file_load_dlq_table,
+                    file_helper=self.file_helper,
+                )
+                result = runner.run()
+                self.results.append(result)
         else:
             self.file_helper.copy_file_to_archive(file_path)
             self.results.append(
@@ -110,9 +113,9 @@ class Processor:
                     f"• {filename}: {error_message}"
                     for filename, error_message in files_failed.items()
                 )
-                details.append(f"\nFailed:\n{failure_details}")
+                details.append(f"\n\nFailed:\n{failure_details}")
             if files_no_source:
-                no_source_details = "\n\n".join(
+                no_source_details = "\n".join(
                     f"• {filename}: {error_message}"
                     for filename, error_message in files_no_source.items()
                 )
