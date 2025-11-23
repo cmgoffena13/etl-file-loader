@@ -279,6 +279,7 @@ class AzureFileHelper(BaseFileHelper):
             kwargs["connection_string"] = config.AZURE_STORAGE_CONNECTION_STRING
         if not kwargs.get("account_key") and not kwargs.get("connection_string"):
             kwargs["anon"] = False
+        kwargs["blocksize"] = 4 * 1024 * 1024  # 4MB blocks
         return kwargs
 
     @classmethod

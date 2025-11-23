@@ -244,6 +244,8 @@ class AWSFileHelper(BaseFileHelper):
                 fs_kwargs["token"] = config.AWS_SESSION_TOKEN
             if config.AWS_REGION:
                 fs_kwargs["client_kwargs"] = {"region_name": config.AWS_REGION}
+            fs_kwargs["default_block_size"] = 4 * 1024 * 1024  # 4MB blocks
+            fs_kwargs["default_fill_cache"] = False
             cls._s3_filesystem = s3fs.S3FileSystem(**fs_kwargs)
 
         fs = cls._s3_filesystem

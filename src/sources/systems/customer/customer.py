@@ -3,7 +3,7 @@ import re
 from pydantic import EmailStr, Field, field_validator
 from pydantic_extra_types.pendulum_dt import Date
 
-from src.sources.base import CSVSource, TableModel
+from src.sources.base import CSVSource, ParquetSource, TableModel
 
 # Cache compiled regex patterns for performance
 _PHONE_CLEAN_PATTERN = re.compile(r"[^\d+]")
@@ -41,12 +41,12 @@ class Customer(TableModel):
         return v.strip().lower()
 
 
-CUSTOMERS = CSVSource(
-    file_pattern="customers-*.csv",
+CUSTOMERS = ParquetSource(
+    file_pattern="customers-*.parquet",
     source_model=Customer,
     table_name="customers",
     grain=["customer_id"],
-    delimiter=",",
-    encoding="utf-8",
-    skip_rows=0,
+    # delimiter=",",
+    # encoding="utf-8",
+    # skip_rows=0,
 )

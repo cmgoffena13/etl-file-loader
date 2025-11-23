@@ -50,26 +50,23 @@ class ParquetReader(BaseReader):
         batch = [None] * self.batch_size
         batch_index = 0
         logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
+        for record_batch in parquet_file.iter_batches(batch_size=self.batch_size):
+            for i in range(record_batch.num_rows):
+                row_dict = {
+                    col: record_batch[col][i].as_py()
+                    for col in record_batch.schema.names
+                }
+                batch[batch_index] = row_dict
+                batch_index += 1
+                self.rows_read += 1
 
-        for row_group in range(parquet_file.num_row_groups):
-            table = parquet_file.read_row_group(row_group)
-            for record_batch in table.to_batches():
-                for i in range(record_batch.num_rows):
-                    row_dict = {
-                        col.lower(): record_batch[col][i].as_py()
-                        for col in record_batch.schema.names
-                    }
-                    batch[batch_index] = row_dict
-                    batch_index += 1
-                    self.rows_read += 1
-
-                    if batch_index == self.batch_size:
-                        logger.debug(
-                            f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
-                        )
-                        yield batch
-                        batch[:] = [None] * self.batch_size
-                        batch_index = 0
+                if batch_index == self.batch_size:
+                    logger.debug(
+                        f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                    )
+                    yield batch
+                    batch[:] = [None] * self.batch_size
+                    batch_index = 0
 
         if batch_index > 0:
             logger.debug(

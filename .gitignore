@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 
+customers-2000000.parquet
 customers-2000000.csv
 
 # Profiling

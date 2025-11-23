@@ -29,7 +29,7 @@ class GlobalConfig(BaseConfig):
     ARCHIVE_PATH: Union[Path, str]
     DUPLICATE_FILES_PATH: Union[Path, str]
 
-    BATCH_SIZE: int = 10000
+    BATCH_SIZE: int = 100000
     LOG_LEVEL: str = "INFO"
 
     @property

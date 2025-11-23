@@ -198,6 +198,7 @@ class GCPFileHelper(BaseFileHelper):
         kwargs = {}
         if config.GOOGLE_APPLICATION_CREDENTIALS:
             kwargs["token"] = config.GOOGLE_APPLICATION_CREDENTIALS
+        kwargs["block_size"] = 4 * 1024 * 1024  # 4MB blocks
         return kwargs
 
     @classmethod
