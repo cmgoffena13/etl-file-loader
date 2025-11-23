@@ -83,7 +83,6 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "opentelemetry-semantic-conventions" },
     { name = "pendulum" },
-    { name = "pre-commit" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
     { name = "pydantic-extra-types", extra = ["pendulum"] },
@@ -93,16 +92,21 @@ dependencies = [
     { name = "pyexcel-xlsx" },
     { name = "pymysql" },
     { name = "pyodbc" },
-    { name = "pytest" },
-    { name = "pytest-xdist" },
     { name = "pythonnet" },
     { name = "rich" },
-    { name = "ruff" },
-    { name = "scalene" },
     { name = "slack-sdk" },
     { name = "sqlalchemy" },
     { name = "typer" },
     { name = "xxhash" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-xdist" },
+    { name = "ruff" },
+    { name = "scalene" },
 ]
 
 [package.metadata]
@@ -126,7 +130,6 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = ">=1.38.0" },
     { name = "opentelemetry-semantic-conventions", specifier = ">=0.59b0" },
     { name = "pendulum", specifier = ">=3.1.0" },
-    { name = "pre-commit", specifier = ">=4.4.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.12" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pydantic-extra-types", extras = ["pendulum"], specifier = ">=2.10.6" },
@@ -136,16 +139,21 @@ requires-dist = [
     { name = "pyexcel-xlsx", specifier = ">=0.6.1" },
     { name = "pymysql", specifier = ">=1.1.2" },
     { name = "pyodbc", specifier = ">=5.3.0" },
-    { name = "pytest", specifier = ">=9.0.1" },
-    { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "pythonnet", specifier = ">=3.0.5" },
     { name = "rich", specifier = ">=14.2.0" },
-    { name = "ruff", specifier = ">=0.14.5" },
-    { name = "scalene", specifier = ">=1.5.55" },
     { name = "slack-sdk", specifier = ">=3.38.0" },
     { name = "sqlalchemy", specifier = ">=2.0.44" },
     { name = "typer", specifier = ">=0.20.0" },
     { name = "xxhash", specifier = ">=3.6.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pre-commit", specifier = ">=4.5.0" },
+    { name = "pytest", specifier = ">=9.0.1" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "ruff", specifier = ">=0.14.6" },
+    { name = "scalene", specifier = ">=1.5.55" },
 ]
 
 [[package]]
@@ -1245,7 +1253,7 @@ wheels = [
 
 [[package]]
 name = "pre-commit"
-version = "4.4.0"
+version = "4.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cfgv" },
@@ -1254,9 +1262,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "virtualenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/49/7845c2d7bf6474efd8e27905b51b11e6ce411708c91e829b93f324de9929/pre_commit-4.4.0.tar.gz", hash = "sha256:f0233ebab440e9f17cabbb558706eb173d19ace965c68cdce2c081042b4fab15", size = 197501, upload-time = "2025-11-08T21:12:11.607Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/9b/6a4ffb4ed980519da959e1cf3122fc6cb41211daa58dbae1c73c0e519a37/pre_commit-4.5.0.tar.gz", hash = "sha256:dc5a065e932b19fc1d4c653c6939068fe54325af8e741e74e88db4d28a4dd66b", size = 198428, upload-time = "2025-11-22T21:02:42.304Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/11/574fe7d13acf30bfd0a8dd7fa1647040f2b8064f13f43e8c963b1e65093b/pre_commit-4.4.0-py2.py3-none-any.whl", hash = "sha256:b35ea52957cbf83dcc5d8ee636cbead8624e3a15fbfa61a370e42158ac8a5813", size = 226049, upload-time = "2025-11-08T21:12:10.228Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/c4/b2d28e9d2edf4f1713eb3c29307f1a63f3d67cf09bdda29715a36a68921a/pre_commit-4.5.0-py2.py3-none-any.whl", hash = "sha256:25e2ce09595174d9c97860a95609f9f852c0614ba602de3561e267547f2335e1", size = 226429, upload-time = "2025-11-22T21:02:40.836Z" },
 ]
 
 [[package]]

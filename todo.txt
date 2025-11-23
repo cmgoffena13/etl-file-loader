@@ -1,4 +1,16 @@
 Add in File Support for: Parquet, Avro
 Add in Compression Support for: snappy
 Add in Database Support for: Snowflake, BigQuery
-Flesh out all Test Scenarios for each File
+Flesh out all Test Scenarios for each File:
+ - Missing Header (for some)
+ - Missing Columns (once)
+ - Validation Error (once)
+    - DLQ Stores Validation Errors (once)
+    - Delete DLQ Records after reprocessing (once)
+ - Grain Validation Failure (once)
+ - Audit Failure (once)
+ - No Data (for some)
+ - decompression (for some)
+ - Duplicate file moved to duplicates (once)
+
+Test Notifications

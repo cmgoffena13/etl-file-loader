@@ -1,9 +1,9 @@
 import logging
-import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 from queue import Empty, Queue
 from typing import Optional
 
+import psutil
 from opentelemetry import trace
 from sqlalchemy import Table
 
@@ -24,7 +24,7 @@ class Processor:
     def __init__(self):
         logger.info("Processor Initialized")
         self.thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(
-            max_workers=multiprocessing.cpu_count()
+            max_workers=psutil.cpu_count(logical=False)
         )
         self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
         self.file_paths_queue: Queue = self.file_helper.scan_directory(
