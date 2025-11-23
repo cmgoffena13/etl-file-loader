@@ -205,10 +205,9 @@ class PipelineRunner:
         db_drop_stage_table(self.stage_table_name, self.Session, self.log.id)
 
     def run(self) -> tuple[bool, str, Optional[str]]:
-        self.check_if_processed()
-        self.archive_file()
-        # Need to archive before finally delete to ensure file is not lost
         try:
+            self.check_if_processed()
+            self.archive_file()
             self.write_data(self.validate_data(self.read_data()))
             self.audit_data()
             self.publish_data()

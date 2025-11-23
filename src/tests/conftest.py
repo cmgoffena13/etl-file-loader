@@ -6,6 +6,7 @@ import csv
 import gzip
 import json
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pyexcel
 import pytest
@@ -16,6 +17,7 @@ from src.sources.master import MASTER_REGISTRY
 from src.tests.fixtures.sources import (
     TEST_CSV_GZ_SOURCE,
     TEST_CSV_SOURCE,
+    TEST_CSV_SOURCE_WITH_NOTIFICATIONS,
     TEST_EXCEL_SOURCE,
     TEST_JSON_GZ_SOURCE,
     TEST_JSON_SOURCE,
@@ -40,6 +42,7 @@ def setup_test_db_and_directories(session_temp_dir):
     test_sources = [
         TEST_CSV_SOURCE,
         TEST_CSV_GZ_SOURCE,
+        TEST_CSV_SOURCE_WITH_NOTIFICATIONS,
         TEST_EXCEL_SOURCE,
         TEST_JSON_SOURCE,
         TEST_JSON_GZ_SOURCE,
@@ -144,3 +147,17 @@ def create_json_gz_file(session_temp_dir):
     for file_path in file_paths:
         if file_path.exists():
             file_path.unlink()
+
+
+@pytest.fixture()
+def mock_email_notify():
+    """Mock email notification function."""
+    with patch("src.notify.email.EmailNotifier.notify") as mock:
+        yield mock
+
+
+@pytest.fixture()
+def mock_slack_notify():
+    """Mock Slack notification function."""
+    with patch("src.notify.slack.SlackNotifier.notify") as mock:
+        yield mock

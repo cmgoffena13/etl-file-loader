@@ -130,3 +130,23 @@ TEST_JSON_GZ_SOURCE = JSONSource(
         FROM {table}
     """,
 )
+
+TEST_CSV_SOURCE_WITH_NOTIFICATIONS = CSVSource(
+    file_pattern="notify_sales_*.csv",
+    source_model=TestTransaction,
+    table_name="transactions_notify",
+    grain=["transaction_id"],
+    delimiter=",",
+    encoding="utf-8",
+    skip_rows=0,
+    validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN unit_price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
+    notification_emails=["test@example.com"],
+)

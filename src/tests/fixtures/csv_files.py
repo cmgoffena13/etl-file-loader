@@ -121,3 +121,16 @@ CSV_FAIL_AUDIT = [
         "John Doe",
     ],
 ]
+
+CSV_NO_DATA = [
+    [
+        "transaction_id",
+        "customer_id",
+        "product_sku",
+        "quantity",
+        "unit_price",
+        "total_amount",
+        "sale_date",
+        "sales_rep",
+    ],
+]
