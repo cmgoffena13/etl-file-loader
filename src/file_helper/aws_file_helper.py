@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import boto3
 import pendulum
+import s3fs
 from botocore.exceptions import ClientError
 
 from src.exception.exceptions import (
@@ -15,6 +16,7 @@ from src.exception.exceptions import (
     FileDeleteError,
     FileMoveError,
 )
+from src.file_helper.aws_wrapper import AWSStreamingBodyWrapper
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
@@ -22,71 +24,9 @@ from src.utils import retry
 logger = logging.getLogger(__name__)
 
 
-class AWSStreamingBodyWrapper:
-    """File-like wrapper for boto3 StreamingBody that tracks download progress."""
-
-    def __init__(self, streaming_body):
-        self.streaming_body = streaming_body
-        self._closed = False
-        self._bytes_downloaded = 0
-        self._last_logged_mb = 0
-
-    def read(self, size=-1):
-        """Read bytes from the stream, tracking progress."""
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-
-        data = self.streaming_body.read(size)
-        if data:
-            self._log_progress(len(data))
-        return data
-
-    def _log_progress(self, bytes_read: int):
-        """Log download progress every 4MB."""
-        self._bytes_downloaded += bytes_read
-        current_mb = self._bytes_downloaded / (1024 * 1024)
-        if current_mb >= self._last_logged_mb + 4:
-            logger.debug(f"Downloaded Total: {current_mb:.2f} MB from S3")
-            self._last_logged_mb = int(current_mb // 4) * 4
-
-    def readable(self):
-        return True
-
-    def writable(self):
-        return False
-
-    def seekable(self):
-        return False
-
-    @property
-    def closed(self):
-        """Property expected by TextIOWrapper."""
-        return self._closed
-
-    def close(self):
-        if not self._closed:
-            if self._bytes_downloaded > 0:
-                total_mb = self._bytes_downloaded / (1024 * 1024)
-                logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
-            else:
-                logger.info("Finished downloading 0.00 MB from S3")
-        self._closed = True
-        if hasattr(self.streaming_body, "close"):
-            self.streaming_body.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    def __getattr__(self, name):
-        """Delegate other attributes to the underlying StreamingBody."""
-        return getattr(self.streaming_body, name)
-
-
 class AWSFileHelper(BaseFileHelper):
     _s3_client = None
+    _s3_filesystem = None
 
     @classmethod
     def _parse_s3_uri(cls, uri: str) -> tuple[str, str]:
@@ -287,24 +227,31 @@ class AWSFileHelper(BaseFileHelper):
     @contextmanager
     @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
-        """Get streaming download from S3."""
+        """Get streaming download from S3 using s3fs."""
         if isinstance(file_path, Path):
             raise ValueError("AWSFileHelper requires S3 URI, not local Path")
 
         if mode != "rb":
             raise ValueError("S3 streams are always binary, mode must be 'rb'")
 
-        bucket, key = cls._parse_s3_uri(str(file_path))
-        s3_client = cls._get_s3_client()
+        if cls._s3_filesystem is None:
+            fs_kwargs = {}
+            if config.AWS_ACCESS_KEY_ID:
+                fs_kwargs["key"] = config.AWS_ACCESS_KEY_ID
+            if config.AWS_SECRET_ACCESS_KEY:
+                fs_kwargs["secret"] = config.AWS_SECRET_ACCESS_KEY
+            if config.AWS_SESSION_TOKEN:
+                fs_kwargs["token"] = config.AWS_SESSION_TOKEN
+            if config.AWS_REGION:
+                fs_kwargs["client_kwargs"] = {"region_name": config.AWS_REGION}
+            cls._s3_filesystem = s3fs.S3FileSystem(**fs_kwargs)
+
+        fs = cls._s3_filesystem
 
         try:
-            response = s3_client.get_object(Bucket=bucket, Key=key)
-            # Wrap StreamingBody to track download progress
-            yield AWSStreamingBodyWrapper(response["Body"])
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-            if error_code == "NoSuchKey":
-                raise FileNotFoundError(f"S3 object not found: {file_path}")
-            raise IOError(f"Failed to stream S3 object {file_path}: {e}")
+            with fs.open(str(file_path), mode) as f:
+                yield AWSStreamingBodyWrapper(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"S3 object not found: {file_path}")
         except Exception as e:
             raise IOError(f"Failed to stream S3 object {file_path}: {e}")

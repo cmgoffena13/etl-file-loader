@@ -27,9 +27,10 @@ class ParquetReader(BaseReader):
         """Parquet: No header row, so starting row = 1"""
         return 1
 
-    def read(self) -> Iterator[list[Dict[str, Any]]]:
-        parquet_file = pq.ParquetFile(self.file_path)
-
+    def _read_from_parquet_file(
+        self, parquet_file: pq.ParquetFile
+    ) -> Iterator[list[Dict[str, Any]]]:
+        """Read row groups from a ParquetFile object."""
         if parquet_file.metadata.num_rows == 0:
             logger.error(f"No data found in Parquet file: {self.source_filename}")
             raise NoDataInFileError(error_values={})
@@ -75,3 +76,13 @@ class ParquetReader(BaseReader):
                 f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
             )
             yield batch[:batch_index]
+
+    def read(self) -> Iterator[list[Dict[str, Any]]]:
+        if isinstance(self.file_path, Path):
+            parquet_file = pq.ParquetFile(self.file_path)
+            yield from self._read_from_parquet_file(parquet_file)
+            return
+
+        with self._get_file_stream("rb") as stream:
+            parquet_file = pq.ParquetFile(stream)
+            yield from self._read_from_parquet_file(parquet_file)

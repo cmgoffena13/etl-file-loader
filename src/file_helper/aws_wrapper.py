@@ -1,0 +1,81 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class AWSStreamingBodyWrapper:
+    """File-like wrapper for s3fs file objects that tracks download progress."""
+
+    def __init__(self, file_obj):
+        self.file_obj = file_obj
+        self._closed = False
+        self._bytes_downloaded = 0
+        self._last_logged_mb = 0
+
+    def read(self, size=-1):
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        data = self.file_obj.read(size)
+        if data:
+            self._log_progress(len(data))
+        return data
+
+    def readinto(self, b):
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        bytes_read = self.file_obj.readinto(b)
+        if bytes_read is not None and bytes_read > 0:
+            self._log_progress(bytes_read)
+        return bytes_read
+
+    def _log_progress(self, bytes_read: int):
+        """Log download progress every 4MB."""
+        self._bytes_downloaded += bytes_read
+        current_mb = self._bytes_downloaded / (1024 * 1024)
+        if current_mb >= self._last_logged_mb + 4:
+            logger.debug(f"Downloaded Total: {current_mb:.2f} MB from S3")
+            self._last_logged_mb = int(current_mb // 4) * 4
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return True
+
+    def seek(self, pos, whence=0):
+        return self.file_obj.seek(pos, whence)
+
+    def tell(self):
+        """Get current file position."""
+        return self.file_obj.tell()
+
+    @property
+    def closed(self):
+        """Property expected by TextIOWrapper."""
+        return self._closed
+
+    def close(self):
+        if not self._closed:
+            if self._bytes_downloaded > 0:
+                total_mb = self._bytes_downloaded / (1024 * 1024)
+                logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+            else:
+                logger.info("Finished downloading 0.00 MB from S3")
+        self._closed = True
+        if hasattr(self.file_obj, "close"):
+            self.file_obj.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __getattr__(self, name):
+        """Delegate other attributes to the underlying file object."""
+        return getattr(self.file_obj, name)
