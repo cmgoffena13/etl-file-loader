@@ -1,4 +1,3 @@
-import io
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -35,7 +34,6 @@ class AzureChunkedStreamReader:
         self._closed = False
         self._bytes_downloaded = 0
         self._last_logged_mb = 0
-        logger.info("Starting Azure Blob download")
 
     def _log_progress(self, bytes_read: int):
         """Log download progress every MB."""
@@ -90,9 +88,12 @@ class AzureChunkedStreamReader:
         return self._closed
 
     def close(self):
-        if not self._closed and self._bytes_downloaded > 0:
-            total_mb = self._bytes_downloaded / (1024 * 1024)
-            logger.info(f"Finished downloading {total_mb:.2f} MB from Azure Blob")
+        if not self._closed:
+            if self._bytes_downloaded > 0:
+                total_mb = self._bytes_downloaded / (1024 * 1024)
+                logger.info(f"Finished downloading {total_mb:.2f} MB from Azure Blob")
+            else:
+                logger.info("Finished downloading 0.00 MB from Azure Blob")
         self._closed = True
         if hasattr(self.download_stream, "close"):
             self.download_stream.close()

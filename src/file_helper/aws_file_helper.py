@@ -30,7 +30,6 @@ class AWSStreamingBodyWrapper:
         self._closed = False
         self._bytes_downloaded = 0
         self._last_logged_mb = 0
-        logger.info("Starting S3 object download")
 
     def read(self, size=-1):
         """Read bytes from the stream, tracking progress."""
@@ -65,9 +64,12 @@ class AWSStreamingBodyWrapper:
         return self._closed
 
     def close(self):
-        if not self._closed and self._bytes_downloaded > 0:
-            total_mb = self._bytes_downloaded / (1024 * 1024)
-            logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+        if not self._closed:
+            if self._bytes_downloaded > 0:
+                total_mb = self._bytes_downloaded / (1024 * 1024)
+                logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+            else:
+                logger.info("Finished downloading 0.00 MB from S3")
         self._closed = True
         if hasattr(self.streaming_body, "close"):
             self.streaming_body.close()

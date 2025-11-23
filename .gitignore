@@ -12,6 +12,9 @@ customers-2000000.csv
 profile.html
 profile.json
 
+# GCP Service Account JSON files
+crypto-topic*.json
+
 # Distribution / packaging
 .Python
 build/
