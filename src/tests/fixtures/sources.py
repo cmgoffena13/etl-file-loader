@@ -85,4 +85,12 @@ TEST_JSON_SOURCE = JSONSource(
     grain=["entry_id"],
     array_path="entries.item",
     validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN debit_amount > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS debit_amount_positive
+        FROM {table}
+    """,
 )
