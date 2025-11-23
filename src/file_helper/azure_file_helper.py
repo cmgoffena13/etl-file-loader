@@ -2,9 +2,10 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
-from typing import Union
+from typing import Any, Union
 from urllib.parse import urlparse
 
+import adlfs
 import pendulum
 from azure.core.credentials import AzureNamedKeyCredential
 from azure.core.exceptions import ResourceNotFoundError
@@ -17,7 +18,7 @@ from src.exception.exceptions import (
     FileDeleteError,
     FileMoveError,
 )
-from src.file_helper.azure_wrapper import AzureChunkedStreamReader
+from src.file_helper.azure_wrapper import AdlfsFileWrapper
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class AzureFileHelper(BaseFileHelper):
     _blob_service_client = None
+    _adlfs_filesystem = None
 
     @classmethod
     def _get_account_name_from_url(cls, url: str) -> str:
@@ -258,28 +260,51 @@ class AzureFileHelper(BaseFileHelper):
         return f"{directory_uri}/{filename}"
 
     @classmethod
+    def _convert_to_adlfs_path(cls, file_path: str) -> str:
+        """Convert Azure URI (https:// or azure://) to adlfs path format (container/blob)."""
+        _, container, blob_name = cls._parse_azure_uri(file_path)
+        return f"{container}/{blob_name}" if blob_name else container
+
+    @classmethod
+    def _get_adlfs_kwargs(cls) -> dict[str, Any]:
+        """Get adlfs kwargs from Azure credentials."""
+        kwargs = {}
+        if config.AZURE_STORAGE_ACCOUNT_URL:
+            kwargs["account_name"] = cls._get_account_name_from_url(
+                config.AZURE_STORAGE_ACCOUNT_URL
+            )
+        if config.AZURE_STORAGE_ACCOUNT_KEY:
+            kwargs["account_key"] = config.AZURE_STORAGE_ACCOUNT_KEY
+        if config.AZURE_STORAGE_CONNECTION_STRING:
+            kwargs["connection_string"] = config.AZURE_STORAGE_CONNECTION_STRING
+        if not kwargs.get("account_key") and not kwargs.get("connection_string"):
+            kwargs["anon"] = False
+        return kwargs
+
+    @classmethod
     @contextmanager
     @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
-        """Get streaming download from Azure Blob Storage."""
+        """Get streaming download from Azure Blob Storage using adlfs."""
         if isinstance(file_path, Path):
             raise ValueError("AzureFileHelper requires Azure Blob URI, not local Path")
 
         if mode != "rb":
             raise ValueError("Azure Blob streams are always binary, mode must be 'rb'")
 
-        _, container, blob_name = cls._parse_azure_uri(str(file_path))
-        blob_service_client = cls._get_blob_service_client()
+        if cls._adlfs_filesystem is None:
+            fs_kwargs = cls._get_adlfs_kwargs()
+            cls._adlfs_filesystem = adlfs.AzureBlobFileSystem(**fs_kwargs)
+
+        fs = cls._adlfs_filesystem
+
+        # Convert HTTPS/azure:// URI to adlfs path format (container/blob)
+        adlfs_path = cls._convert_to_adlfs_path(str(file_path))
 
         try:
-            blob_client = blob_service_client.get_blob_client(
-                container=container, blob=blob_name
-            )
-            download_stream = blob_client.download_blob()
-            # Use chunked streaming wrapper to read chunks on demand
-            # This avoids loading the entire file into memory
-            yield AzureChunkedStreamReader(download_stream)
+            with fs.open(adlfs_path, mode) as f:
+                yield AdlfsFileWrapper(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Azure Blob not found: {file_path}")
         except Exception as e:
-            if "BlobNotFound" in str(e) or "404" in str(e):
-                raise FileNotFoundError(f"Azure Blob not found: {file_path}")
             raise IOError(f"Failed to stream Azure Blob {file_path}: {e}")

@@ -3,9 +3,10 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
-from typing import Union
+from typing import Any, Union
 from urllib.parse import urlparse
 
+import gcsfs
 import pendulum
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
@@ -17,7 +18,7 @@ from src.exception.exceptions import (
     FileMoveError,
 )
 from src.file_helper.base import BaseFileHelper
-from src.file_helper.gcp_wrapper import GCPBlobStreamWrapper
+from src.file_helper.gcp_wrapper import GcsfsFileWrapper
 from src.settings import config
 from src.utils import retry
 
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class GCPFileHelper(BaseFileHelper):
     _storage_client = None
+    _gcsfs_filesystem = None
 
     @classmethod
     def _parse_gcs_uri(cls, uri: str) -> tuple[str, str]:
@@ -191,26 +193,34 @@ class GCPFileHelper(BaseFileHelper):
         return f"{directory_uri}/{filename}"
 
     @classmethod
+    def _get_gcsfs_kwargs(cls) -> dict[str, Any]:
+        """Get gcsfs kwargs from GCP credentials."""
+        kwargs = {}
+        if config.GOOGLE_APPLICATION_CREDENTIALS:
+            kwargs["token"] = config.GOOGLE_APPLICATION_CREDENTIALS
+        return kwargs
+
+    @classmethod
     @contextmanager
     @retry()
     def get_file_stream(cls, file_path: Union[Path, str], mode: str = "rb"):
-        """Get streaming download from GCS."""
+        """Get streaming download from GCS using gcsfs."""
         if isinstance(file_path, Path):
             raise ValueError("GCPFileHelper requires GCS URI, not local Path")
 
         if mode != "rb":
             raise ValueError("GCS streams are always binary, mode must be 'rb'")
 
-        bucket_name, blob_name = cls._parse_gcs_uri(str(file_path))
-        storage_client = cls._get_storage_client()
+        if cls._gcsfs_filesystem is None:
+            fs_kwargs = cls._get_gcsfs_kwargs()
+            cls._gcsfs_filesystem = gcsfs.GCSFileSystem(**fs_kwargs)
+
+        fs = cls._gcsfs_filesystem
 
         try:
-            bucket = storage_client.bucket(bucket_name)
-            blob = bucket.blob(blob_name)
-            # Wrap blob stream to track download progress
-            with blob.open("rb") as blob_stream:
-                yield GCPBlobStreamWrapper(blob_stream)
+            with fs.open(str(file_path), mode) as f:
+                yield GcsfsFileWrapper(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"GCS blob not found: {file_path}")
         except Exception as e:
-            if "not found" in str(e).lower() or "404" in str(e):
-                raise FileNotFoundError(f"GCS blob not found: {file_path}")
             raise IOError(f"Failed to stream GCS blob {file_path}: {e}")
