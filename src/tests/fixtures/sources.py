@@ -56,6 +56,14 @@ TEST_EXCEL_SOURCE = ExcelSource(
     sheet_name=None,
     skip_rows=0,
     validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN Price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
 )
 
 

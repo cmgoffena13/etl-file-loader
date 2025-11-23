@@ -71,7 +71,7 @@ def create_csv_file(session_temp_dir):
 def create_excel_file(session_temp_dir):
     file_paths = []
 
-    def _create_excel_file(file_name: str, data: list[list[str]]):
+    def _create_excel_file(file_name: str, data: list[list]):
         file_path = session_temp_dir / file_name
         pyexcel.save_as(
             array=data, dest_file_name=str(file_path), name_columns_by_row=0
