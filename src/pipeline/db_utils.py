@@ -206,6 +206,10 @@ def db_create_stage_table(
     sanitized_name = sanitize_table_name(source_filename)
     stage_table_name = f"stage__{sanitized_name}"
 
+    # Remove table from metadata if it already exists (from previous processing)
+    if stage_table_name in metadata.tables:
+        metadata.remove(metadata.tables[stage_table_name])
+
     columns = get_table_columns(source, include_timestamps=False)
 
     stage_table = Table(stage_table_name, metadata, *columns)

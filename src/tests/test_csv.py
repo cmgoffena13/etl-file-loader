@@ -128,3 +128,87 @@ def test_csv_with_fail_audit(create_csv_file, test_processor):
     assert success is False
     assert "sales_fail_audit.csv" in filename
     assert error == "AuditFailedError"
+
+
+def test_csv_dlq_records_deleted_on_reprocess(create_csv_file, test_processor):
+    """Test that DLQ records are deleted when a file is reprocessed successfully."""
+    # First, process file with validation errors (creates DLQ records)
+    create_csv_file("sales_reprocess_test.csv", CSV_VALIDATION_ERROR)
+
+    test_processor.results.clear()
+    test_processor.process_file("sales_reprocess_test.csv")
+
+    # Verify processing failed and DLQ records were created
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is False
+    assert error == "ValidationThresholdExceededError"
+
+    # Verify DLQ records exist
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "sales_reprocess_test.csv"
+            )
+        ).fetchall()
+        assert len(result) > 0, "Expected DLQ records to exist after validation failure"
+        initial_dlq_count = len(result)
+
+    # Create a fixed version of the file (without validation errors)
+    CSV_FIXED = [
+        [
+            "transaction_id",
+            "customer_id",
+            "product_sku",
+            "quantity",
+            "unit_price",
+            "total_amount",
+            "sale_date",
+            "sales_rep",
+        ],
+        [
+            "TXN001",
+            "CUST001",
+            "SKU001",
+            "2",
+            "10.50",  # Fixed: was "asdf"
+            "21.00",
+            "2024-01-15",
+            "John Doe",
+        ],
+        [
+            "TXN002",
+            "CUST002",
+            "SKU002",
+            "1",
+            "25.00",
+            "25.00",
+            "2024-01-16",
+            "Jane Smith",
+        ],
+    ]
+    create_csv_file("sales_reprocess_test.csv", CSV_FIXED)
+
+    # Reprocess the file - should succeed
+    test_processor.results.clear()
+    test_processor.process_file("sales_reprocess_test.csv")
+
+    # Verify processing succeeded
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is True
+    assert "sales_reprocess_test.csv" in filename
+    assert error is None
+
+    # Verify old DLQ records were deleted
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "sales_reprocess_test.csv"
+            )
+        ).fetchall()
+        assert len(result) == 0, (
+            f"Expected DLQ records to be deleted after successful reprocess, but found {len(result)} records"
+        )
