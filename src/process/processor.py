@@ -22,6 +22,7 @@ tracer = trace.get_tracer(__name__)
 
 class Processor:
     def __init__(self):
+        logger.info("Processor Initialized")
         self.thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(
             max_workers=multiprocessing.cpu_count()
         )
@@ -119,7 +120,7 @@ class Processor:
                     f"• {filename}: {error_message}"
                     for filename, error_message in files_no_source.items()
                 )
-                details.append(f"No Source Found:\n{no_source_details}")
+                details.append(f"\n\nNo Source Found:\n{no_source_details}")
 
             message = "\n\n".join(details)
             notifier = NotifierFactory.get_notifier("slack")

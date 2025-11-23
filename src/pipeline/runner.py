@@ -250,11 +250,12 @@ class PipelineRunner:
                         None,
                     )
                 # Failure since email notification was not sent
-                self.result = (
-                    False,
-                    self.source_filename,
-                    type(e).__name__,
-                )
+                if self.result is None:
+                    self.result = (
+                        False,
+                        self.source_filename,
+                        type(e).__name__,
+                    )
             else:
                 error_location = get_error_location(e)
                 logger.exception(
