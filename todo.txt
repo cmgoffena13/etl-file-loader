@@ -1,0 +1,4 @@
+Add in File Support for: Parquet, Avro
+Add in Compression Support for: snappy
+Add in Database Support for: Snowflake, BigQuery
+Flesh out all Test Scenarios for each File
