@@ -5,6 +5,7 @@ from src.pipeline.read.base import BaseReader
 from src.pipeline.read.csv import CSVReader
 from src.pipeline.read.excel import ExcelReader
 from src.pipeline.read.json import JSONReader
+from src.pipeline.read.parquet import ParquetReader
 from src.sources.base import DataSource
 from src.utils import get_file_extension
 
@@ -17,6 +18,7 @@ class ReaderFactory:
         ".json": JSONReader,
         ".csv.gz": CSVReader,
         ".json.gz": JSONReader,
+        ".parquet": ParquetReader,
     }
 
     @classmethod
@@ -32,7 +34,13 @@ class ReaderFactory:
         reader_class = cls._readers[extension]
 
         reader_kwargs = source.model_dump(
-            include={"delimiter", "encoding", "skip_rows", "sheet_name", "array_path"}
+            include={
+                "delimiter",
+                "encoding",
+                "skip_rows",
+                "sheet_name",
+                "array_path",
+            }
         )
 
         return reader_class(

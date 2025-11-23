@@ -8,6 +8,8 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pyexcel
 import pytest
 
@@ -22,6 +24,7 @@ from src.tests.fixtures.sources import (
     TEST_EXCEL_SOURCE,
     TEST_JSON_GZ_SOURCE,
     TEST_JSON_SOURCE,
+    TEST_PARQUET_SOURCE,
 )
 
 
@@ -48,6 +51,7 @@ def setup_test_db_and_directories(session_temp_dir):
         TEST_EXCEL_SOURCE,
         TEST_JSON_SOURCE,
         TEST_JSON_GZ_SOURCE,
+        TEST_PARQUET_SOURCE,
     ]
     MASTER_REGISTRY.add_sources(test_sources)
 
@@ -145,6 +149,29 @@ def create_json_gz_file(session_temp_dir):
         return file_name
 
     yield _create_json_gz_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
+def create_parquet_file(session_temp_dir):
+    file_paths = []
+
+    def _create_parquet_file(file_name: str, data: list[dict[str, Any]]):
+        file_path = session_temp_dir / file_name
+        if not data:
+            # Create empty parquet file with schema from source model
+            # This would require access to the source, so we'll raise an error
+            raise ValueError("Cannot create empty parquet file without schema")
+
+        table = pa.Table.from_pylist(data)
+        pq.write_table(table, file_path)
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_parquet_file
 
     for file_path in file_paths:
         if file_path.exists():

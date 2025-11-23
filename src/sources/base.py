@@ -51,3 +51,7 @@ class ExcelSource(DataSource):
 
 class JSONSource(DataSource):
     array_path: str = Field(default="item")
+
+
+class ParquetSource(DataSource):
+    pass

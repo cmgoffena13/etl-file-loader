@@ -3,7 +3,13 @@ from typing import Optional
 from pydantic import Field
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 
-from src.sources.base import CSVSource, ExcelSource, JSONSource, TableModel
+from src.sources.base import (
+    CSVSource,
+    ExcelSource,
+    JSONSource,
+    ParquetSource,
+    TableModel,
+)
 
 
 class TestTransaction(TableModel):
@@ -167,6 +173,23 @@ TEST_CSV_SOURCE_WITH_THRESHOLD = CSVSource(
             SUM(CASE WHEN unit_price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
             THEN 1 ELSE 0 
         END AS unit_price_positive
+        FROM {table}
+    """,
+)
+
+
+TEST_PARQUET_SOURCE = ParquetSource(
+    file_pattern="ledger_*.parquet",
+    source_model=TestLedgerEntry,
+    table_name="ledger_entries_parquet",
+    grain=["entry_id"],
+    validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN debit_amount > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS debit_amount_positive
         FROM {table}
     """,
 )
