@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from src.tests.fixtures.json_files import (
     JSON_DUPLICATES,
     JSON_FAIL_AUDIT,
@@ -40,6 +42,23 @@ def test_json_with_validation_error(create_json_file, test_processor):
     assert success is False
     assert "ledger_validation_error.json" in filename
     assert error == "ValidationThresholdExceededError"
+
+    # Verify that validation errors were inserted into DLQ table
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "ledger_validation_error.json"
+            )
+        ).fetchall()
+        assert len(result) > 0, (
+            "Expected validation errors to be inserted into DLQ table"
+        )
+        # Verify the first record has validation errors
+        first_record = result[0]
+        assert first_record.file_row_number == 1  # First item in array has the error
+        assert first_record.source_filename == "ledger_validation_error.json"
+        assert first_record.validation_errors is not None
 
 
 def test_json_with_missing_columns(create_json_file, test_processor):

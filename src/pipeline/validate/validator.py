@@ -123,7 +123,7 @@ class Validator:
                     failed_field_names = extract_failed_field_names(
                         error_details, self.source.grain
                     )
-                    file_row_number = total_records - self.starting_row_number + 1
+                    file_row_number = (self.starting_row_number + total_records) - 1
                     dlq_record = self._create_dlq_record(
                         record, failed_field_names, error_details, file_row_number
                     )

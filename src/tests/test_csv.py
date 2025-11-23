@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from src.tests.fixtures.csv_files import (
     CSV_BLANK_HEADER,
     CSV_DUPLICATES,
@@ -55,6 +57,26 @@ def test_csv_with_validation_error(create_csv_file, test_processor):
     assert success is False
     assert "sales_validation_error.csv" in filename
     assert error == "ValidationThresholdExceededError"
+
+    # Verify that validation errors were inserted into DLQ table
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "sales_validation_error.csv"
+            )
+        ).fetchall()
+        assert len(result) > 0, (
+            "Expected validation errors to be inserted into DLQ table"
+        )
+        # Verify the first record has validation errors
+        first_record = result[0]
+        assert (
+            first_record.file_row_number == 2
+        )  # Second row (after header) has the error
+        assert first_record.source_filename == "sales_validation_error.csv"
+        assert first_record.validation_errors is not None
+        assert first_record.file_record_data is not None
 
 
 def test_csv_with_missing_header(create_csv_file, test_processor):

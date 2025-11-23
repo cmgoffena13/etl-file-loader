@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from src.tests.fixtures.excel_files import (
     EXCEL_BLANK_HEADER,
     EXCEL_DUPLICATES,
@@ -57,6 +59,26 @@ def test_excel_with_validation_error(create_excel_file, test_processor):
     assert success is False
     assert "inventory_validation_error.xlsx" in filename
     assert error == "ValidationThresholdExceededError"
+
+    # Verify that validation errors were inserted into DLQ table
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "inventory_validation_error.xlsx"
+            )
+        ).fetchall()
+        assert len(result) > 0, (
+            "Expected validation errors to be inserted into DLQ table"
+        )
+        # Verify the first record has validation errors
+        first_record = result[0]
+        assert (
+            first_record.file_row_number == 2
+        )  # Second row (after header) has the error
+        assert first_record.source_filename == "inventory_validation_error.xlsx"
+        assert first_record.validation_errors is not None
+        assert first_record.file_record_data is not None
 
 
 def test_excel_with_missing_header(create_excel_file, test_processor):
