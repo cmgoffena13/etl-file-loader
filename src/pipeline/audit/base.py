@@ -46,7 +46,7 @@ class BaseAuditor(ABC):
             grain_field: get_field_alias(self.source, grain_field)
             for grain_field in self.source.grain
         }
-        duplicate_examples_formatted = ""
+        duplicate_examples_formatted = "Sample duplicate grain violations:\n"
         for record in duplicate_examples:
             record_dict = dict(record._mapping)
             aliased_record = {
@@ -56,15 +56,24 @@ class BaseAuditor(ABC):
             aliased_record["duplicate_count"] = record_dict["duplicate_count"]
             record_str = ", ".join(f"{k}: {v}" for k, v in aliased_record.items())
             duplicate_examples_formatted += f"  - {record_str}\n"
+        return duplicate_examples_formatted
+
+    def _raise_grain_validation_error(self, duplicate_examples: list[dict[str, Any]]):
+        grain_field_aliases = {
+            grain_field: get_field_alias(self.source, grain_field)
+            for grain_field in self.source.grain
+        }
+        duplicate_examples_formatted = self._format_duplicate_examples(
+            duplicate_examples
+        )
         logger.error(
             f"[log_id={self.log_id}] Grain validation failed for table {self.stage_table_name}"
         )
         raise GrainValidationError(
             error_values={
-                "source_filename": self.source_filename,
                 "stage_table_name": self.stage_table_name,
                 "grain_aliases_formatted": ", ".join(grain_field_aliases.values()),
-                "duplicate_examples_formatted": duplicate_examples_formatted,
+                "additional_details": duplicate_examples_formatted,
             }
         )
 
@@ -83,7 +92,7 @@ class BaseAuditor(ABC):
             result = session.execute(text(grain_sql)).fetchone()
             if result._mapping["grain_unique"] == 0:
                 duplicate_examples = self._get_duplicate_grain_examples(session)
-                self._format_duplicate_examples(duplicate_examples)
+                self._raise_grain_validation_error(duplicate_examples)
 
     @retry()
     def audit_data(self):
@@ -113,7 +122,6 @@ class BaseAuditor(ABC):
             )
             raise AuditFailedError(
                 error_values={
-                    "source_filename": self.source_filename,
                     "stage_table_name": self.stage_table_name,
                     "failed_audits_formatted": failed_audits_formatted,
                 }

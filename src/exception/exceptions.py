@@ -24,10 +24,9 @@ class GrainValidationError(BaseFileErrorEmailException):
     @property
     def email_message(self) -> str:
         return (
-            "Grain values are not unique for file: {source_filename}\n",
-            "Table: {stage_table_name}\n",
-            "Grain columns (file column names): {grain_aliases_formatted}\n",
-            "Example duplicate grain violations: \n{duplicate_examples_formatted}",
+            "Grain values are not unique for file: {source_filename}\n"
+            "Table: {stage_table_name}\n"
+            "Grain columns (file column names): {grain_aliases_formatted}"
         )
 
 
@@ -38,9 +37,9 @@ class AuditFailedError(BaseFileErrorEmailException):
     @property
     def email_message(self) -> str:
         return (
-            "Audit checks failed for file: {source_filename}\n",
-            "Table: {stage_table_name}\n",
-            "Failed audits: \n{failed_audits_formatted}",
+            "Audit checks failed for file: {source_filename}\n"
+            "Table: {stage_table_name}\n"
+            "Failed audits: \n{failed_audits_formatted}"
         )
 
 

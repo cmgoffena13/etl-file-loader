@@ -47,17 +47,13 @@ class CSVReader(BaseReader):
 
             if not reader.fieldnames:
                 logger.error(f"No header found in file: {self.source_filename}")
-                raise MissingHeaderError(
-                    error_values={"source_filename": self.source_filename}
-                )
+                raise MissingHeaderError(error_values={})
 
             if not any(
                 fieldname and fieldname.strip() for fieldname in reader.fieldnames
             ):
                 logger.error(f"No header found in file: {self.source_filename}")
-                raise MissingHeaderError(
-                    error_values={"source_filename": self.source_filename}
-                )
+                raise MissingHeaderError(error_values={})
 
             self._validate_fields(set(reader.fieldnames))
 

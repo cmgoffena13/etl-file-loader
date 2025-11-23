@@ -113,9 +113,7 @@ class ExcelReader(BaseReader):
 
         if no_valid_headers or all_default_names:
             logger.error(f"No header found in file: {self.source_filename}")
-            raise MissingHeaderError(
-                error_values={"source_filename": self.source_filename}
-            )
+            raise MissingHeaderError(error_values={})
 
         self._validate_fields(actual_headers)
 

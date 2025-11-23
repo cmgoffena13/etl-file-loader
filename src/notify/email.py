@@ -26,16 +26,19 @@ class EmailNotifier(BaseNotifier):
         self.exception = exception
         self.recipient_emails = recipient_emails
         self.log_id = log_id
-        self.email_message = self._create_message()
         self.additional_details = additional_details
+        self.error_values = kwargs
+        self.email_message = self._create_message()
 
-    def _format_email_message(self, **kwargs: Any) -> str:
-        return self.exception.email_message.format(**kwargs)
+    def _format_email_message(self) -> str:
+        return self.exception.email_message.format(
+            source_filename=self.source_filename, **self.error_values
+        )
 
     def _create_message(self) -> str:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = (
-            f"FileLoader Failed: {self.source_filename} - {self.exception.error_type}"
+            f"FileLoader Failed: {self.source_filename} - {type(self.exception).__name__}"
         )
         if config.FROM_EMAIL is None:
             logger.warning("FROM_EMAIL not configured, skipping email notification")
@@ -46,24 +49,19 @@ class EmailNotifier(BaseNotifier):
         if config.DATA_TEAM_EMAIL:
             msg["Cc"] = config.DATA_TEAM_EMAIL
 
-        body_text = textwrap.dedent(f"""
-        File Processing Failure Notification
+        body_text = f"""File Processing Failure Notification
 
-        File: {self.source_filename}
-        Error Type: {self.exception.error_type}
-        Log ID: {self.log_id if self.log_id else "N/A"}
+File: {self.source_filename}
+Error Type: {type(self.exception).__name__}
 
-        Error Details:
-        {self._format_email_message()}
-        """).strip()
+Error Details:
+{self._format_email_message()}"""
 
         if self.additional_details:
-            body_text += f"\nAdditional Information:\n{self.additional_details}"
+            body_text += f"\n\nAdditional Information:\n{self.additional_details}"
 
         if self.log_id:
-            body_text += (
-                f"\n\nData Team can reference log_id={self.log_id} for more details."
-            )
+            body_text += f"\n\nData Team can reference log_id={self.log_id if self.log_id else 'N/A'} for more details."
 
         msg.attach(MIMEText(body_text, "plain"))
         return msg
@@ -87,19 +85,20 @@ class EmailNotifier(BaseNotifier):
                     server.starttls()
                 server.login(config.SMTP_USER, config.SMTP_PASSWORD)
 
-            all_recipients = self.recipient_emails + config.DATA_TEAM_EMAIL
+            all_recipients = self.recipient_emails + (
+                [config.DATA_TEAM_EMAIL] if config.DATA_TEAM_EMAIL else []
+            )
             server.sendmail(
                 config.FROM_EMAIL, all_recipients, self.email_message.as_string()
             )
             logger.info(
-                f"Sent failure notification email for {self.source_filename} to {len(all_recipients)} recipient(s)"
+                f"Sent failure notification email for file: {self.source_filename} to {len(self.recipient_emails)} recipient(s)"
             )
 
-    @classmethod
-    def notify(self, emails: list[str], message: str):
+    def notify(self):
         try:
             self._send_email()
         except Exception as e:
             logger.exception(
-                f"Failed to send notification email for {self.source_filename} after retries: {e}"
+                f"Failed to send notification email for file: {self.source_filename} after retries: {e}"
             )

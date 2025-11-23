@@ -13,7 +13,6 @@ from src.exception.exceptions import (
     ValidationThresholdExceededError,
 )
 from src.file_helper.base import BaseFileHelper
-from src.file_helper.factory import FileHelperFactory
 from src.notify.factory import NotifierFactory
 from src.pipeline.audit.base import BaseAuditor
 from src.pipeline.audit.factory import AuditorFactory
@@ -131,9 +130,7 @@ class PipelineRunner:
             self.file_helper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
             self._log_update(self.log)
-            raise DuplicateFileError(
-                error_values={"source_filename": self.source_filename}
-            )
+            raise DuplicateFileError(error_values={})
 
         self.log.duplicate_skipped = False
         self._log_update(self.log)
@@ -268,8 +265,7 @@ class PipelineRunner:
                         f"{str(e)} at {error_location}",
                     )
             finally:
-                pass
-                # self.file_helper.delete_file(self.file_path)
+                self.file_helper.delete_file(self.file_path)
             return self.result
 
     def __del__(self):

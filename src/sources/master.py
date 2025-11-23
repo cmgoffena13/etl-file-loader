@@ -5,4 +5,4 @@ from src.sources.systems.inventory.inventory import INVENTORY
 from src.sources.systems.sales.sales import SALES
 
 MASTER_REGISTRY = SourceRegistry()
-MASTER_REGISTRY.add_sources([INVENTORY, SALES, FINANCIAL, CUSTOMERS])
+MASTER_REGISTRY.add_sources([INVENTORY, SALES, FINANCIAL])

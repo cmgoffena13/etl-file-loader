@@ -84,18 +84,14 @@ class JSONReader(BaseReader):
             try:
                 first_obj = next(objects)
             except StopIteration:
-                raise NoDataInFileError(
-                    error_values={"source_filename": self.source_filename}
-                )
+                raise NoDataInFileError(error_values={})
 
             # Validate fields using first object
             if isinstance(first_obj, list) and first_obj:
                 first_item = first_obj[0]
             elif isinstance(first_obj, list):
                 logger.error(f"No data found in JSON file: {self.file_path}")
-                raise NoDataInFileError(
-                    error_values={"source_filename": self.source_filename}
-                )
+                raise NoDataInFileError(error_values={})
             else:
                 first_item = first_obj
 

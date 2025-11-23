@@ -48,7 +48,6 @@ class BaseReader(ABC):
             logger.error(f"Missing columns: {missing_fields_display}")
             raise MissingColumnsError(
                 error_values={
-                    "source_filename": self.source_filename,
                     "required_fields_display_formatted": ", ".join(
                         required_fields_display
                     ),

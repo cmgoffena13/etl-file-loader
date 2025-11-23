@@ -16,7 +16,7 @@ class Transaction(TableModel):
 
 
 SALES = CSVSource(
-    file_pattern="sales_*.csv.gz",
+    file_pattern="sales_*.csv",
     source_model=Transaction,
     table_name="transactions",
     grain=["transaction_id"],
@@ -29,4 +29,5 @@ SALES = CSVSource(
     delimiter=",",
     encoding="utf-8",
     skip_rows=0,
+    notification_emails=["cortland.goffena@hotmail.com"],
 )

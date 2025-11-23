@@ -45,6 +45,28 @@ class Validator:
         self.sample_validation_errors: List[Dict[str, Any]] = []
         self.log_id: int = log_id
 
+    def _format_sample_error(self, err: Dict[str, Any]) -> str:
+        """Format a sample validation error with fields broken out."""
+        error_details = err["error_details"]
+        formatted_parts = [f"Row {err['file_row_number']}:"]
+
+        for error in error_details:
+            if isinstance(error, dict):
+                if error.get("loc"):
+                    field_name = (
+                        str(error["loc"][-1]) if len(error["loc"]) > 0 else "unknown"
+                    )
+                    column_name = self.reverse_field_mapping.get(field_name, field_name)
+                    formatted_parts.append(f"  Column: {column_name}")
+                if error.get("input") is not None:
+                    formatted_parts.append(f"  Value: {error['input']}")
+                if error.get("type"):
+                    formatted_parts.append(f"  Error Type: {error['type']}")
+                if error.get("msg"):
+                    formatted_parts.append(f"  Error Message: {error['msg']}")
+        formatted_parts.append(f"  Record: {err['record']}")
+        return "\n".join(formatted_parts)
+
     def _create_dlq_record(
         self,
         record: Dict[str, Any],
@@ -109,9 +131,7 @@ class Validator:
                         self.sample_validation_errors.append(
                             {
                                 "file_row_number": file_row_number,
-                                "validation_error": extract_validation_error_message(
-                                    error_details, self.reverse_field_mapping
-                                ),
+                                "error_details": error_details,
                                 "record": record,
                             }
                         )
@@ -134,7 +154,7 @@ class Validator:
             if error_rate >= self.source.validation_error_threshold:
                 truncated_error_rate = round(error_rate, 2)
                 sample_errors_str = "Sample validation failure records:\n" + "\n".join(
-                    f"Row {err['file_row_number']}: {err['validation_error']} - Record: {err['record']}"
+                    self._format_sample_error(err)
                     for err in self.sample_validation_errors
                 )
                 logger.error(

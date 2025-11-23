@@ -21,7 +21,6 @@ from sqlalchemy import (
     String,
     Table,
     insert,
-    select,
     text,
 )
 from sqlalchemy import Date as SQLDate
@@ -196,6 +195,7 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
     return columns
 
 
+@retry()
 def db_create_stage_table(
     engine: Engine,
     metadata: MetaData,
@@ -204,14 +204,14 @@ def db_create_stage_table(
     log_id: int,
 ) -> str:
     sanitized_name = sanitize_table_name(source_filename)
-    stage_table_name = f"stage_{sanitized_name}"
+    stage_table_name = f"stage__{sanitized_name}"
 
     columns = get_table_columns(source, include_timestamps=False)
 
     stage_table = Table(stage_table_name, metadata, *columns)
     metadata.drop_all(engine, tables=[stage_table])
     metadata.create_all(engine, tables=[stage_table])
-    logger.info(f"[log_id={log_id}] Created stage table {stage_table_name}")
+    logger.info(f"[log_id={log_id}] Created stage table: {stage_table_name}")
     return stage_table_name
 
 
@@ -224,10 +224,10 @@ def db_drop_stage_table(
             drop_sql = text(f"DROP TABLE IF EXISTS {stage_table_name}")
             session.execute(drop_sql)
             session.commit()
-            logger.info(f"[log_id={log_id}] Dropped stage table {stage_table_name}")
+            logger.info(f"[log_id={log_id}] Dropped stage table: {stage_table_name}")
         except Exception as e:
             logger.exception(
-                f"[log_id={log_id}] Error dropping stage table {stage_table_name}: {e}"
+                f"[log_id={log_id}] Error dropping stage table: {stage_table_name}: {e}"
             )
             session.rollback()
             raise e
@@ -304,7 +304,7 @@ def db_start_log(
             session.commit()
             return int(res.inserted_primary_key[0])
         except Exception as e:
-            logger.exception(f"Error starting log for {source_filename}: {e}")
+            logger.exception(f"Error starting log for file: {source_filename}: {e}")
             session.rollback()
             raise e
 
@@ -330,23 +330,3 @@ def db_create_duplicate_grain_examples_sql(source: DataSource, limit: int = 5) -
     {bottom_clause}
     """
     return duplicate_sql
-
-
-def db_delete_dlq_records_if_reprocessing(
-    Session: sessionmaker[Session],
-    file_load_dlq_table: Table,
-    source_filename: str,
-    log_id: int,
-):
-    with Session() as session:
-        existing_dlq = session.execute(
-            select(file_load_dlq_table.c.id)
-            .where(
-                file_load_dlq_table.c.source_filename == source_filename,
-                file_load_dlq_table.c.file_load_log_id < log_id,
-            )
-            .limit(1)
-        ).first()
-
-        if existing_dlq:
-            pass

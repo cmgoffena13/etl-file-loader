@@ -31,7 +31,7 @@ class Processor:
         create_tables(self.metadata, self.engine)
         self.file_load_log_table: Table = self.metadata.tables["file_load_log"]
         self.file_load_dlq_table: Table = self.metadata.tables["file_load_dlq"]
-        self.results: list[tuple[bool, str, Optional[str]]] = []
+        self.results: list[tuple[Optional[bool], str, Optional[str]]] = []
 
     def process_file(self, file_name: str):
         file_path = self.file_helper.get_file_path(config.DIRECTORY_PATH, file_name)
@@ -55,7 +55,7 @@ class Processor:
         else:
             self.file_helper.copy_file_to_archive(file_path)
             self.results.append(
-                (False, file_name, f"No source found for file {file_name}")
+                (None, file_name, f"No source found for file: {file_name}")
             )
 
     def _worker(self, file_paths_queue: Queue):
@@ -85,26 +85,44 @@ class Processor:
     def results_summary(self):
         success_count = 0
         failure_count = 0
+        no_source_count = 0
         files_failed = {}
+        files_no_source = {}
         for result in self.results:
-            if result[0]:
+            status, filename, error_message = result
+            if status is True:
                 success_count += 1
-            else:
+            elif status is False:
                 failure_count += 1
-                files_failed[result[1]] = result[2]
+                files_failed[filename] = error_message
+            else:
+                no_source_count += 1
+                files_no_source[filename] = error_message
+
         logger.info(
-            f"Processing complete with {success_count} success(es) and {failure_count} failure(s)"
+            f"Processing complete: {success_count} successful, {failure_count} failed, {no_source_count} no source found"
         )
-        if files_failed:
-            failure_details = "\n".join(
-                f"• {filename}: {error_message}"
-                for filename, error_message in files_failed.items()
-            )
-            message = f"Some files failed to process:\n{failure_details}"
+
+        if files_failed or files_no_source:
+            details = []
+            if files_failed:
+                failure_details = "\n".join(
+                    f"• {filename}: {error_message}"
+                    for filename, error_message in files_failed.items()
+                )
+                details.append(f"\nFailed:\n{failure_details}")
+            if files_no_source:
+                no_source_details = "\n\n".join(
+                    f"• {filename}: {error_message}"
+                    for filename, error_message in files_no_source.items()
+                )
+                details.append(f"No Source Found:\n{no_source_details}")
+
+            message = "\n\n".join(details)
             notifier = NotifierFactory.get_notifier("slack")
             slack_notifier = notifier(
                 level=AlertLevel.ERROR,
-                title="File Processing Failure Summary",
+                title="File Processing Summary",
                 message=message,
             )
             slack_notifier.notify()
