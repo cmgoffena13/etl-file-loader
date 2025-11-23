@@ -29,10 +29,14 @@ class BaseReader(ABC):
     @contextmanager
     def _get_file_stream(self, mode: str = "rb"):
         with self.file_helper.get_file_stream(self.file_path, mode) as stream:
-            if self.is_gzipped:
-                yield gzip.open(stream, mode)
-            else:
-                yield stream
+            try:
+                if self.is_gzipped:
+                    yield gzip.open(stream, mode)
+                else:
+                    yield stream
+            finally:
+                if hasattr(stream, "close") and not getattr(stream, "_closed", True):
+                    stream.close()
 
     def _validate_fields(self, actual_fields: set) -> None:
         actual_file_fields = set(field.lower() for field in actual_fields)

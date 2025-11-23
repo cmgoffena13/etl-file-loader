@@ -16,7 +16,10 @@ class AWSStreamingBodyWrapper:
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
-        data = self.file_obj.read(size)
+        if hasattr(self.file_obj, "read"):
+            data = self.file_obj.read(size)
+        else:
+            raise AttributeError("File object has no 'read' method")
         if data:
             self._log_progress(len(data))
         return data
@@ -25,10 +28,39 @@ class AWSStreamingBodyWrapper:
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
-        bytes_read = self.file_obj.readinto(b)
+        if hasattr(self.file_obj, "readinto"):
+            bytes_read = self.file_obj.readinto(b)
+        else:
+            raise AttributeError("File object has no 'readinto' method")
         if bytes_read is not None and bytes_read > 0:
             self._log_progress(bytes_read)
         return bytes_read
+
+    def read1(self, size=-1):
+        """Read bytes from the stream (used by buffered readers), tracking progress."""
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if hasattr(self.file_obj, "read1"):
+            data = self.file_obj.read1(size)
+        else:
+            data = self.file_obj.read(size)
+        if data:
+            self._log_progress(len(data))
+        return data
+
+    def read_buffer(self, size=-1):
+        """Read buffer method used by some libraries."""
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if hasattr(self.file_obj, "read_buffer"):
+            data = self.file_obj.read_buffer(size)
+        else:
+            data = self.file_obj.read(size)
+        if data:
+            self._log_progress(len(data))
+        return data
 
     def _log_progress(self, bytes_read: int):
         """Log download progress every 4MB."""
@@ -63,7 +95,11 @@ class AWSStreamingBodyWrapper:
         if not self._closed:
             if self._bytes_downloaded > 0:
                 total_mb = self._bytes_downloaded / (1024 * 1024)
-                logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+                if total_mb >= 0.01:  # Show MB if >= 1KB
+                    logger.info(f"Finished downloading {total_mb:.2f} MB from S3")
+                else:
+                    total_kb = self._bytes_downloaded / 1024
+                    logger.info(f"Finished downloading {total_kb:.2f} KB from S3")
             else:
                 logger.info("Finished downloading 0.00 MB from S3")
         self._closed = True
@@ -78,4 +114,19 @@ class AWSStreamingBodyWrapper:
 
     def __getattr__(self, name):
         """Delegate other attributes to the underlying file object."""
+        # Return our wrapped methods if requested
+        if name == "read":
+            return self.read
+        if name == "read1":
+            return self.read1
+        if name == "readinto":
+            return self.readinto
+        if name == "read_buffer":
+            return self.read_buffer
+        if name == "seek":
+            return self.seek
+        if name == "tell":
+            return self.tell
+        if name == "close":
+            return self.close
         return getattr(self.file_obj, name)
