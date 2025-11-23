@@ -16,7 +16,7 @@ from src.exception.exceptions import (
     FileDeleteError,
     FileMoveError,
 )
-from src.file_helper.aws_wrapper import AWSStreamingBodyWrapper
+from src.file_helper.aws_wrapper import S3fsFileWrapper
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
@@ -200,12 +200,12 @@ class AWSFileHelper(BaseFileHelper):
         return f"{directory_uri}/{filename}"
 
     @classmethod
-    def is_file_compressed(cls, file_path: Union[Path, str]) -> bool:
+    def is_gzipped(cls, file_path: Union[Path, str]) -> bool:
         """Check if S3 object is actually compressed by checking actual stream bytes."""
         if isinstance(file_path, Path):
             raise ValueError("AWSFileHelper requires S3 URI, not local Path")
 
-        if not super().is_file_compressed(file_path):
+        if not super().is_gzipped(file_path):
             return False
 
         bucket, key = cls._parse_s3_uri(str(file_path))
@@ -250,7 +250,7 @@ class AWSFileHelper(BaseFileHelper):
 
         try:
             with fs.open(str(file_path), mode) as f:
-                yield AWSStreamingBodyWrapper(f)
+                yield S3fsFileWrapper(f)
         except FileNotFoundError:
             raise FileNotFoundError(f"S3 object not found: {file_path}")
         except Exception as e:

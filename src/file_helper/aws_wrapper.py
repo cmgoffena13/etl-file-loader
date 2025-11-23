@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AWSStreamingBodyWrapper:
+class S3fsFileWrapper:
     """File-like wrapper for s3fs file objects that tracks download progress."""
 
     def __init__(self, file_obj):

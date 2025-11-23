@@ -24,7 +24,7 @@ class BaseReader(ABC):
         self.batch_size: int = config.BATCH_SIZE
         self.rows_read: int = 0
         self.file_helper: BaseFileHelper = FileHelperFactory.create_file_helper()
-        self.is_gzipped: bool = self.file_helper.is_file_compressed(file_path)
+        self.is_gzipped: bool = self.file_helper.is_gzipped(file_path)
 
     @contextmanager
     def _get_file_stream(self, mode: str = "rb"):
