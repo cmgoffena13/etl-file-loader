@@ -6,6 +6,7 @@ from src.tests.fixtures.csv_files import (
     CSV_FAIL_AUDIT,
     CSV_MISSING_COLUMNS,
     CSV_VALIDATION_ERROR,
+    CSV_VALIDATION_ERRORS_BELOW_THRESHOLD,
 )
 
 
@@ -94,6 +95,39 @@ def test_csv_with_missing_header(create_csv_file, test_processor):
     assert success is False
     assert "sales_no_header.csv" in filename
     assert error == "MissingHeaderError"
+
+
+def test_csv_with_validation_errors_below_threshold(create_csv_file, test_processor):
+    """Test that CSV files with validation errors below threshold succeed."""
+    create_csv_file(
+        "threshold_sales_validation.csv", CSV_VALIDATION_ERRORS_BELOW_THRESHOLD
+    )
+
+    test_processor.results.clear()
+
+    # Process the file - should succeed because error rate (1/10 = 0.1) is below threshold (0.15)
+    test_processor.process_file("threshold_sales_validation.csv")
+
+    # Check that processing succeeded
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is True
+    assert "threshold_sales_validation.csv" in filename
+    assert error is None
+
+    # Verify that validation errors were still inserted into DLQ table
+    with test_processor.engine.connect() as conn:
+        dlq_table = test_processor.file_load_dlq_table
+        result = conn.execute(
+            select(dlq_table).where(
+                dlq_table.c.source_filename == "threshold_sales_validation.csv"
+            )
+        ).fetchall()
+        assert len(result) > 0, (
+            "Expected validation errors to be inserted into DLQ table"
+        )
+        # Should have 1 DLQ record for the invalid price
+        assert len(result) == 1
 
 
 def test_csv_with_missing_columns(create_csv_file, test_processor):

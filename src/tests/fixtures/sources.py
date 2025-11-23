@@ -150,3 +150,23 @@ TEST_CSV_SOURCE_WITH_NOTIFICATIONS = CSVSource(
     """,
     notification_emails=["test@example.com"],
 )
+
+# Test source with higher validation error threshold (allows some errors)
+TEST_CSV_SOURCE_WITH_THRESHOLD = CSVSource(
+    file_pattern="threshold_sales_*.csv",
+    source_model=TestTransaction,
+    table_name="transactions_threshold",
+    grain=["transaction_id"],
+    delimiter=",",
+    encoding="utf-8",
+    skip_rows=0,
+    validation_error_threshold=0.15,  # Allow up to 15% error rate
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN unit_price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
+)
