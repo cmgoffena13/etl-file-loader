@@ -220,7 +220,7 @@ class GCPFileHelper(BaseFileHelper):
 
         try:
             with fs.open(str(file_path), mode) as f:
-                yield GcsfsFileWrapper(f)
+                yield GcsfsFileWrapper(f, file_path=str(file_path))
         except FileNotFoundError:
             raise FileNotFoundError(f"GCS blob not found: {file_path}")
         except Exception as e:

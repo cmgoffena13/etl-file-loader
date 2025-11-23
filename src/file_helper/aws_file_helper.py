@@ -252,7 +252,7 @@ class AWSFileHelper(BaseFileHelper):
 
         try:
             with fs.open(str(file_path), mode) as f:
-                yield S3fsFileWrapper(f)
+                yield S3fsFileWrapper(f, file_path=str(file_path))
         except FileNotFoundError:
             raise FileNotFoundError(f"S3 object not found: {file_path}")
         except Exception as e:

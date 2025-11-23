@@ -1,4 +1,6 @@
 import logging
+from pathlib import Path
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -6,11 +8,21 @@ logger = logging.getLogger(__name__)
 class GcsfsFileWrapper:
     """File-like wrapper for gcsfs file objects that tracks download progress."""
 
-    def __init__(self, file_obj):
+    def __init__(self, file_obj, file_path: str = None):
         self.file_obj = file_obj
         self._closed = False
         self._bytes_downloaded = 0
         self._last_logged_mb = 0
+        self._filename = None
+
+        if file_path:
+            if file_path.startswith("gs://"):
+                parsed = urlparse(file_path)
+                self._filename = Path(parsed.path).name
+            else:
+                self._filename = Path(file_path).name
+        else:
+            self._filename = "unknown"
 
     def read(self, size=-1):
         if self._closed:
@@ -67,7 +79,9 @@ class GcsfsFileWrapper:
         self._bytes_downloaded += bytes_read
         current_mb = self._bytes_downloaded / (1024 * 1024)
         if current_mb >= self._last_logged_mb + 4:
-            logger.debug(f"Downloaded Total: {current_mb:.2f} MB from GCS")
+            logger.debug(
+                f"Downloaded Total: {current_mb:.2f} MB from GCS for file: {self._filename}"
+            )
             self._last_logged_mb = int(current_mb // 4) * 4
 
     def readable(self):
@@ -96,12 +110,18 @@ class GcsfsFileWrapper:
             if self._bytes_downloaded > 0:
                 total_mb = self._bytes_downloaded / (1024 * 1024)
                 if total_mb >= 0.01:  # Show MB if >= 10KB
-                    logger.info(f"Finished downloading {total_mb:.2f} MB from GCS")
+                    logger.info(
+                        f"Finished downloading {total_mb:.2f} MB from GCS for file: {self._filename}"
+                    )
                 else:
                     total_kb = self._bytes_downloaded / 1024
-                    logger.info(f"Finished downloading {total_kb:.2f} KB from GCS")
+                    logger.info(
+                        f"Finished downloading {total_kb:.2f} KB from GCS for file: {self._filename}"
+                    )
             else:
-                logger.info("Finished downloading 0.00 MB from GCS")
+                logger.info(
+                    f"Finished downloading 0.00 MB from GCS for file: {self._filename}"
+                )
         self._closed = True
         if hasattr(self.file_obj, "close"):
             self.file_obj.close()

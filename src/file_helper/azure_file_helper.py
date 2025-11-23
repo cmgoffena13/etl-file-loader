@@ -304,7 +304,7 @@ class AzureFileHelper(BaseFileHelper):
 
         try:
             with fs.open(adlfs_path, mode) as f:
-                yield AdlfsFileWrapper(f)
+                yield AdlfsFileWrapper(f, file_path=str(file_path))
         except FileNotFoundError:
             raise FileNotFoundError(f"Azure Blob not found: {file_path}")
         except Exception as e:
