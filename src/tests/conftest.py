@@ -3,6 +3,7 @@ import os
 # Needs to happen before local imports
 os.environ["ENV_STATE"] = "test"
 import csv
+import gzip
 import json
 from typing import Any
 
@@ -13,8 +14,10 @@ from src.process.processor import Processor
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 from src.tests.fixtures.sources import (
+    TEST_CSV_GZ_SOURCE,
     TEST_CSV_SOURCE,
     TEST_EXCEL_SOURCE,
+    TEST_JSON_GZ_SOURCE,
     TEST_JSON_SOURCE,
 )
 
@@ -36,8 +39,10 @@ def setup_test_db_and_directories(session_temp_dir):
 
     test_sources = [
         TEST_CSV_SOURCE,
+        TEST_CSV_GZ_SOURCE,
         TEST_EXCEL_SOURCE,
         TEST_JSON_SOURCE,
+        TEST_JSON_GZ_SOURCE,
     ]
     MASTER_REGISTRY.add_sources(test_sources)
 
@@ -87,6 +92,25 @@ def create_excel_file(session_temp_dir):
 
 
 @pytest.fixture()
+def create_csv_gz_file(session_temp_dir):
+    file_paths = []
+
+    def _create_csv_gz_file(file_name: str, data: list[list[str]]):
+        file_path = session_temp_dir / file_name
+        with gzip.open(file_path, "wt", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_csv_gz_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
 def create_json_file(session_temp_dir):
     file_paths = []
 
@@ -98,6 +122,24 @@ def create_json_file(session_temp_dir):
         return file_name
 
     yield _create_json_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
+def create_json_gz_file(session_temp_dir):
+    file_paths = []
+
+    def _create_json_gz_file(file_name: str, data: dict[str, Any]):
+        file_path = session_temp_dir / file_name
+        with gzip.open(file_path, "wt", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_json_gz_file
 
     for file_path in file_paths:
         if file_path.exists():

@@ -94,3 +94,39 @@ TEST_JSON_SOURCE = JSONSource(
         FROM {table}
     """,
 )
+
+TEST_CSV_GZ_SOURCE = CSVSource(
+    file_pattern="sales_*.csv.gz",
+    source_model=TestTransaction,
+    table_name="transactions_gz",
+    grain=["transaction_id"],
+    delimiter=",",
+    encoding="utf-8",
+    skip_rows=0,
+    validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN unit_price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
+)
+
+TEST_JSON_GZ_SOURCE = JSONSource(
+    file_pattern="ledger_*.json.gz",
+    source_model=TestLedgerEntry,
+    table_name="ledger_entries_gz",
+    grain=["entry_id"],
+    array_path="entries.item",
+    validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN debit_amount > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS debit_amount_positive
+        FROM {table}
+    """,
+)
