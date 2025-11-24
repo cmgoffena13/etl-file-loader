@@ -1,6 +1,7 @@
 from sqlalchemy import Engine
 
 from src.pipeline.publish.base import BasePublisher
+from src.pipeline.publish.bigquery import BigQueryPublisher
 from src.pipeline.publish.mssql import SQLServerPublisher
 from src.pipeline.publish.mysql import MySQLPublisher
 from src.pipeline.publish.postgresql import PostgreSQLPublisher
@@ -15,6 +16,7 @@ class PublisherFactory:
         "postgresql": PostgreSQLPublisher,
         "mysql": MySQLPublisher,
         "sqlite": SQLitePublisher,
+        "bigquery": BigQueryPublisher,
     }
 
     @classmethod

@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, Union, get_args, get_origin
@@ -30,6 +31,7 @@ from sqlalchemy.dialects.mysql import BINARY
 from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy_bigquery import TIMESTAMP
 
 from src.settings import config
 from src.sources.base import DataSource
@@ -71,6 +73,7 @@ def _get_timezone_aware_datetime_type():
         ),  # DATETIME doesn't support timezone, convert to UTC
         "mssql": mssql.DATETIMEOFFSET(2),  # DATETIMEOFFSET
         "sqlite": SQLDateTime(timezone=True),  # TEXT, timezone stored in value
+        "bigquery": TIMESTAMP,
     }
 
     try:
@@ -91,6 +94,7 @@ def _get_fixed_binary_type(length: int = 16):
         "mysql": BINARY(length),  # Fixed-length BINARY(n)
         "mssql": mssql.BINARY(length),  # Fixed-length BINARY(n)
         "sqlite": LargeBinary(length),  # BLOB with length hint
+        "bigquery": LargeBinary(length),  # BLOB with length hint
     }
 
     try:
@@ -266,7 +270,7 @@ def db_serialize_json_for_dlq_table(data: Dict[str, Any]) -> str:
                 f"JSON data truncated to 4000 chars for SQL Server compatibility"
             )
         return json_str
-    elif drivername == "sqlite":
+    elif drivername in ("sqlite", "bigquery"):
         return json.dumps(data, ensure_ascii=False)
     else:
         return data
@@ -299,13 +303,25 @@ def db_start_log(
     source_filename: str,
     started_at: DateTime,
 ) -> int:
-    stmt = insert(file_load_log_table).values(
-        source_filename=source_filename, started_at=started_at
-    )
+    if config.DRIVERNAME == "bigquery":
+        log_id = int(time.time_ns() // 1000)
+    else:
+        log_id = None
+
+    values = {
+        "source_filename": source_filename,
+        "started_at": started_at,
+    }
+    if log_id is not None:
+        values["id"] = log_id
+
+    stmt = insert(file_load_log_table).values(**values)
     with Session() as session:
         try:
             res = session.execute(stmt)
             session.commit()
+            if log_id is not None:
+                return log_id
             return int(res.inserted_primary_key[0])
         except Exception as e:
             logger.exception(f"Error starting log for file: {source_filename}: {e}")

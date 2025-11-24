@@ -14,6 +14,7 @@ SUPPORTED_DATABASE_DRIVERS = {
     "mysql": "mysql",
     "mssql": "mssql",
     "sqlite": "sqlite",
+    "bigquery": "bigquery",
 }
 
 
@@ -156,7 +157,10 @@ def get_database_config():
     env_state = BaseConfig().ENV_STATE
     db_config = get_config(env_state)
 
-    is_sqlite = db_config.DATABASE_URL.startswith("sqlite")
+    if config.DRIVERNAME == "bigquery":
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
+            db_config.GOOGLE_APPLICATION_CREDENTIALS
+        )
 
     config_dict = {
         "sqlalchemy.url": db_config.DATABASE_URL,
@@ -164,7 +168,7 @@ def get_database_config():
         "sqlalchemy.future": True,
     }
 
-    if is_sqlite:
+    if config.DRIVERNAME == "sqlite":
         config_dict["sqlalchemy.connect_args"] = {"check_same_thread": False}
         config_dict["sqlalchemy.pool_size"] = 1
     else:

@@ -8,13 +8,34 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.sampling import Decision, Sampler, SamplingResult
 
 from src.settings import config
 
 
+class BigQuerySpanSampler(Sampler):
+    def should_sample(
+        self,
+        parent_context,
+        trace_id,
+        name,
+        kind=None,
+        attributes=None,
+        links=None,
+        trace_state=None,
+    ):
+        if "BigQuery" in name or "bigquery" in name.lower():
+            return SamplingResult(Decision.DROP)
+
+        return SamplingResult(Decision.RECORD_AND_SAMPLE)
+
+    def get_description(self):
+        return "BigQuerySpanSampler - drops BigQuery spans"
+
+
 def setup_logging():
     # Setup OpenTelemetry tracing
-    tracer_provider = TracerProvider()
+    tracer_provider = TracerProvider(sampler=BigQuerySpanSampler())
     trace.set_tracer_provider(tracer_provider)
 
     # Setup OpenTelemetry logging

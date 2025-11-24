@@ -1,5 +1,7 @@
 import logging
+import time
 from abc import ABC
+from decimal import Decimal
 from typing import Any, Dict, Iterator
 
 from sqlalchemy import Engine, Table, insert, text
@@ -37,6 +39,10 @@ class BaseWriter(ABC):
             f"INSERT INTO {self.stage_table_name} ({', '.join(self.columns)}) VALUES ({placeholders})"
         )
 
+    def _convert_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Can override in subclasses to add custom conversion logic."""
+        return record
+
     def write(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
         sql_insert_template = self.create_stage_insert_sql()
         valid_records = [None] * self.batch_size
@@ -47,6 +53,7 @@ class BaseWriter(ABC):
         )
         for batch in batches:
             for passed, record in batch:
+                record = self._convert_record(record)
                 if passed:
                     valid_records[valid_index] = record
                     valid_index += 1
@@ -93,33 +100,34 @@ class BaseWriter(ABC):
                 logger.info(
                     f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
                 )
-            if valid_index > 0:
-                with self.Session() as session:
-                    try:
-                        logger.debug(
-                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
-                        )
-                        session.execute(
-                            sql_insert_template, valid_records[:valid_index]
-                        )
-                        session.commit()
-                        self.rows_written_to_stage += valid_index
-                    except Exception as e:
-                        logger.exception(
-                            f"Error inserting records into stage table {self.stage_table_name}: {e}"
-                        )
-                        session.rollback()
-                        raise e
-            if invalid_records:
-                with self.Session() as session:
-                    try:
-                        stmt = insert(self.file_load_dlq_table).values(invalid_records)
-                        session.execute(stmt)
-                        session.commit()
-                        self.rows_written_to_stage += len(invalid_records)
-                    except Exception as e:
-                        logger.exception(
-                            f"Error inserting records into file load DLQ table: {e}"
-                        )
-                        session.rollback()
-                        raise e
+        if valid_index > 0:
+            with self.Session() as session:
+                try:
+                    logger.debug(
+                        f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
+                    )
+                    session.execute(sql_insert_template, valid_records[:valid_index])
+                    session.commit()
+                    self.rows_written_to_stage += valid_index
+                except Exception as e:
+                    logger.exception(
+                        f"Error inserting records into stage table {self.stage_table_name}: {e}"
+                    )
+                    session.rollback()
+                    raise e
+        if invalid_records:
+            with self.Session() as session:
+                try:
+                    logger.debug(
+                        f"[log_id={self.log_id}] Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table_name}"
+                    )
+                    stmt = insert(self.file_load_dlq_table).values(invalid_records)
+                    session.execute(stmt)
+                    session.commit()
+                    self.rows_written_to_stage += len(invalid_records)
+                except Exception as e:
+                    logger.exception(
+                        f"Error inserting records into file load DLQ table: {e}"
+                    )
+                    session.rollback()
+                    raise e

@@ -261,7 +261,7 @@ class PipelineRunner:
                 )
         finally:
             # self.file_helper.delete_file(self.file_path)
-            pass
+            self._log_update(self.log)
         return self.result
 
     def __del__(self):

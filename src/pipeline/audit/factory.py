@@ -4,6 +4,7 @@ from typing import Union
 from sqlalchemy import Engine
 
 from src.pipeline.audit.base import BaseAuditor
+from src.pipeline.audit.bigquery import BigQueryAuditor
 from src.pipeline.audit.mssql import SQLServerAuditor
 from src.pipeline.audit.mysql import MySQLAuditor
 from src.pipeline.audit.postgresql import PostgreSQLAuditor
@@ -18,6 +19,7 @@ class AuditorFactory:
         "postgresql": PostgreSQLAuditor,
         "mysql": MySQLAuditor,
         "sqlite": SQLiteAuditor,
+        "bigquery": BigQueryAuditor,
     }
 
     @classmethod

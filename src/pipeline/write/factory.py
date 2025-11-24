@@ -1,9 +1,7 @@
-from typing import Type
-
-from sqlalchemy import Engine, MetaData, Table
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import Engine, Table
 
 from src.pipeline.write.base import BaseWriter
+from src.pipeline.write.bigquery import BigQueryWriter
 from src.pipeline.write.mssql import SQLServerWriter
 from src.pipeline.write.mysql import MySQLWriter
 from src.pipeline.write.postgresql import PostgreSQLWriter
@@ -18,6 +16,7 @@ class WriterFactory:
         "postgresql": PostgreSQLWriter,
         "mysql": MySQLWriter,
         "sqlite": SQLiteWriter,
+        "bigquery": BigQueryWriter,
     }
 
     @classmethod

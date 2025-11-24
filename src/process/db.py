@@ -76,6 +76,7 @@ def _get_json_column_type():
         "mysql": JSON,
         "mssql": String(4000),
         "sqlite": Text,
+        "bigquery": String,  # BigQuery stores JSON as STRING
     }
 
     for dialect_key, column_type in json_column_mapping.items():
@@ -95,24 +96,35 @@ def create_tables(metadata: MetaData, engine: Engine):
                 f"Source {source.table_name} has more than 3 grain columns. Inefficient primary key."
             )
         primary_key = PrimaryKeyConstraint(*source.grain)
+
+        source_table_kwargs = {}
+        if config.DRIVERNAME == "bigquery":
+            source_table_kwargs["bigquery_clustering_fields"] = source.grain
         table = Table(
             source.table_name,
             metadata,
             *columns,
             primary_key,
+            **source_table_kwargs,
         )
         # define index separately, bound to table column
-        Index(f"idx_{source.table_name}_source_filename", table.c.source_filename)
+        if config.DRIVERNAME != "bigquery":
+            Index(f"idx_{source.table_name}_source_filename", table.c.source_filename)
         tables.append(table)
 
     # SQLite requires Integer for auto-increment primary keys
     id_column_type = Integer if config.DRIVERNAME == "sqlite" else BigInteger
+    id_autoincrement = False if config.DRIVERNAME == "bigquery" else True
     datetime_type = _get_timezone_aware_datetime_type()
+
+    table_kwargs = {}
+    if config.DRIVERNAME == "bigquery":
+        table_kwargs["bigquery_clustering_fields"] = ["source_filename", "id"]
 
     file_load_log = Table(
         "file_load_log",
         metadata,
-        Column("id", id_column_type, primary_key=True, autoincrement=True),
+        Column("id", id_column_type, primary_key=True, autoincrement=id_autoincrement),
         Column("source_filename", String(255), nullable=False),
         Column("started_at", datetime_type, nullable=False),
         Column("duplicate_skipped", Boolean, nullable=True),
@@ -149,22 +161,28 @@ def create_tables(metadata: MetaData, engine: Engine):
         Column("ended_at", datetime_type, nullable=True),
         Column("success", Boolean, nullable=True),
         Column("error_type", String(50), nullable=True),
+        **table_kwargs,
     )
-    Index(
-        "idx_file_load_log_source_filename",
-        file_load_log.c.source_filename,
-        file_load_log.c.id,
-    )
+    if config.DRIVERNAME != "bigquery":
+        Index(
+            "idx_file_load_log_source_filename",
+            file_load_log.c.source_filename,
+            file_load_log.c.id,
+        )
     tables.append(file_load_log)
 
     # Dead Letter Queue table for validation failures
     # Use appropriate JSON column type based on database backend
     json_column_type = _get_json_column_type()
 
+    table_kwargs = {}
+    if config.DRIVERNAME == "bigquery":
+        table_kwargs["bigquery_clustering_fields"] = ["source_filename", "id"]
+
     file_load_dlq = Table(
         "file_load_dlq",
         metadata,
-        Column("id", id_column_type, primary_key=True, autoincrement=True),
+        Column("id", id_column_type, primary_key=True, autoincrement=id_autoincrement),
         Column("source_filename", String(255), nullable=False),
         Column("file_row_number", Integer, nullable=False),
         Column("file_record_data", json_column_type, nullable=False),
@@ -177,11 +195,15 @@ def create_tables(metadata: MetaData, engine: Engine):
         ),
         Column("target_table_name", String(255), nullable=False),
         Column("failed_at", datetime_type, nullable=False),
+        **table_kwargs,
     )
-    Index("idx_dlq_file_load_log_id", file_load_dlq.c.file_load_log_id)
-    Index(
-        "idx_dlq_source_filename", file_load_dlq.c.source_filename, file_load_dlq.c.id
-    )
+    if config.DRIVERNAME != "bigquery":
+        Index("idx_dlq_file_load_log_id", file_load_dlq.c.file_load_log_id)
+        Index(
+            "idx_dlq_source_filename",
+            file_load_dlq.c.source_filename,
+            file_load_dlq.c.id,
+        )
     tables.append(file_load_dlq)
     if isinstance(config, DevConfig):
         metadata.drop_all(engine, tables=tables)

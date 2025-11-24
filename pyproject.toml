@@ -13,6 +13,8 @@ dependencies = [
     "email-validator>=2.3.0",
     "fastavro>=1.12.1",
     "gcsfs>=2025.10.0",
+    "google-cloud-bigquery>=3.38.0",
+    "google-cloud-bigquery-storage>=2.34.0",
     "google-cloud-storage>=3.6.0",
     "ijson>=3.4.0.post0",
     "opentelemetry-api>=1.38.0",
@@ -42,6 +44,7 @@ dependencies = [
     "s3fs>=0.4.2",
     "slack-sdk>=3.38.0",
     "sqlalchemy>=2.0.44",
+    "sqlalchemy-bigquery>=1.16.0",
     "typer>=0.20.0",
     "xxhash>=3.6.0",
 ]

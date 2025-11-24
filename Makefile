@@ -35,6 +35,9 @@ dev-sqlserver-bulk: reset
 	sleep 5
 	docker compose up file-loader-sqlserver-bulk
 
+dev-bigquery: reset
+	ENV_STATE=dev DEV_DATABASE_URL=bigquery://crypto-topic-479022-e7/test uv run python main.py
+
 reset:
 	cp -R src/tests/test_archive/* src/tests/test_directory/
 	rm -rf src/tests/test_duplicate_files/*

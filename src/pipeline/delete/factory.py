@@ -1,12 +1,12 @@
 from sqlalchemy import Engine, Table
 
 from src.pipeline.delete.base import BaseDeleter
+from src.pipeline.delete.bigquery import BigQueryDeleter
 from src.pipeline.delete.mssql import SQLServerDeleter
 from src.pipeline.delete.mysql import MySQLDeleter
 from src.pipeline.delete.postgresql import PostgreSQLDeleter
 from src.pipeline.delete.sqlite import SQLiteDeleter
 from src.settings import config
-from src.sources.base import DataSource
 
 
 class DeleterFactory:
@@ -15,6 +15,7 @@ class DeleterFactory:
         "postgresql": PostgreSQLDeleter,
         "mysql": MySQLDeleter,
         "sqlite": SQLiteDeleter,
+        "bigquery": BigQueryDeleter,
     }
 
     @classmethod
