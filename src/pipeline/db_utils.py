@@ -158,6 +158,7 @@ def get_table_columns(source, include_timestamps: bool = True) -> list[Column]:
                         break
 
             # SQL Server requires explicit length - default to 255 if not specified
+            # max_length None ends up being NVARCHAR(MAX). Gross.
             if max_length is None and config.DRIVERNAME == "mssql":
                 max_length = 255
 
@@ -208,7 +209,7 @@ def db_create_stage_table(
     log_id: int,
 ) -> str:
     sanitized_name = sanitize_table_name(source_filename)
-    stage_table_name = f"stage__{sanitized_name}__{log_id}"
+    stage_table_name = f"stage__{sanitized_name}"
 
     # Remove table from metadata if it already exists (from previous processing)
     if stage_table_name in metadata.tables:

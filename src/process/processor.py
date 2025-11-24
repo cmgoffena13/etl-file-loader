@@ -21,7 +21,25 @@ tracer = trace.get_tracer(__name__)
 
 
 class Processor:
-    def __init__(self):
+    def __init__(
+        self,
+        directory_path: Optional[str] = None,
+        archive_path: Optional[str] = None,
+        duplicate_files_path: Optional[str] = None,
+    ):
+        if directory_path:
+            config.DIRECTORY_PATH = directory_path
+        if archive_path:
+            config.ARCHIVE_PATH = archive_path
+        if duplicate_files_path:
+            config.DUPLICATE_FILES_PATH = duplicate_files_path
+        if not directory_path or not archive_path or not duplicate_files_path:
+            logger.error(
+                "Directory path, archive path, and duplicate files path are required if any one is provided"
+            )
+            raise ValueError(
+                "Directory path, archive path, and duplicate files path are required if any one is provided"
+            )
         logger.info("Processor Initialized")
         self.thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(
             max_workers=psutil.cpu_count(logical=False)

@@ -242,7 +242,7 @@ class PipelineRunner:
                         self.source_filename,
                         None,
                     )
-                # Failure since email notification was not sent
+                # Failure since email notification was not sent, notifies through slack instead
                 if self.result is None:
                     self.result = (
                         False,
@@ -260,7 +260,7 @@ class PipelineRunner:
                     f"{str(e)} at {error_location}",
                 )
         finally:
-            # self.file_helper.delete_file(self.file_path)
+            self.file_helper.delete_file(self.file_path)
             self._log_update(self.log)
         return self.result
 
