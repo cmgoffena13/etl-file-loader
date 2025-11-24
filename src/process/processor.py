@@ -66,6 +66,7 @@ class Processor:
         except Exception as e:
             logger.exception(f"Error finding source for file {file_name}: {e}")
             self.results.append((False, file_name, str(e)))
+            return
         if source is not None:
             with tracer.start_as_current_span(f"File: {file_name}"):
                 runner = PipelineRunner(
