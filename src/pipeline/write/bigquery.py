@@ -92,7 +92,7 @@ class BigQueryWriter(BaseWriter):
                     valid_records[valid_index] = record
                     valid_index += 1
 
-                    if valid_index >= self.batch_size:
+                    if valid_index == self.batch_size:
                         rows_loaded = self._load_batch(valid_records[:valid_index])
                         self.rows_written_to_stage += rows_loaded
                         logger.debug(
@@ -106,7 +106,7 @@ class BigQueryWriter(BaseWriter):
                             invalid_records
                         )
                     invalid_records.append(record)
-                    if len(invalid_records) >= self.batch_size:
+                    if len(invalid_records) == self.batch_size:
                         with self.Session() as session:
                             try:
                                 stmt = insert(self.file_load_dlq_table).values(
@@ -128,24 +128,24 @@ class BigQueryWriter(BaseWriter):
                 logger.info(
                     f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
                 )
-        if valid_index > 0:
-            logger.debug(
-                f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
-            )
-            rows_loaded = self._load_batch(valid_records[:valid_index])
-            self.rows_written_to_stage += rows_loaded
-        if invalid_records:
-            with self.Session() as session:
-                try:
-                    logger.debug(
-                        f"[log_id={self.log_id}] Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table_name}"
-                    )
-                    stmt = insert(self.file_load_dlq_table).values(invalid_records)
-                    session.execute(stmt)
-                    session.commit()
-                except Exception as e:
-                    logger.exception(
-                        f"Error inserting records into file load DLQ table: {e}"
-                    )
-                    session.rollback()
-                    raise e
+            if valid_index > 0:
+                logger.debug(
+                    f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
+                )
+                rows_loaded = self._load_batch(valid_records[:valid_index])
+                self.rows_written_to_stage += rows_loaded
+            if invalid_records:
+                with self.Session() as session:
+                    try:
+                        logger.debug(
+                            f"[log_id={self.log_id}] Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table.name}"
+                        )
+                        stmt = insert(self.file_load_dlq_table).values(invalid_records)
+                        session.execute(stmt)
+                        session.commit()
+                    except Exception as e:
+                        logger.exception(
+                            f"Error inserting records into file load DLQ table: {e}"
+                        )
+                        session.rollback()
+                        raise e
