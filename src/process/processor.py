@@ -33,7 +33,12 @@ class Processor:
             config.ARCHIVE_PATH = archive_path
         if duplicate_files_path:
             config.DUPLICATE_FILES_PATH = duplicate_files_path
-        if not directory_path or not archive_path or not duplicate_files_path:
+        if (
+            directory_path
+            or archive_path
+            or duplicate_files_path
+            and not all([directory_path, archive_path, duplicate_files_path])
+        ):
             logger.error(
                 "Directory path, archive path, and duplicate files path are required if any one is provided"
             )
