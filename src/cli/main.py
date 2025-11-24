@@ -31,6 +31,24 @@ def process(
         "-f",
         help="File to process (including file extension)",
     ),
+    directory_path: Optional[str] = typer.Option(
+        None,
+        "--directory-path",
+        "-d",
+        help="Directory to process",
+    ),
+    archive_path: Optional[str] = typer.Option(
+        None,
+        "--archive-path",
+        "-a",
+        help="Archive directory",
+    ),
+    duplicate_files_path: Optional[str] = typer.Option(
+        None,
+        "--duplicate-files-path",
+        "-dfp",
+        help="Duplicate files directory",
+    ),
 ) -> None:
     config.LOG_LEVEL = "WARNING"
 
@@ -43,15 +61,17 @@ def process(
             handler.show_time = False
             handler.show_path = False
 
-    processor = Processor()
+    processor = Processor(
+        directory_path=directory_path,
+        archive_path=archive_path,
+        duplicate_files_path=duplicate_files_path,
+    )
     console.print(f"[green]Processing files from:[/green] {config.DIRECTORY_PATH}")
 
     if file:
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TimeElapsedColumn(),
             console=console,
         ) as progress:
