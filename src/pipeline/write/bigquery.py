@@ -93,13 +93,19 @@ class BigQueryWriter(BaseWriter):
                     valid_index += 1
 
                     if valid_index == self.batch_size:
-                        rows_loaded = self._load_batch(valid_records[:valid_index])
-                        self.rows_written_to_stage += rows_loaded
-                        logger.debug(
-                            f"[log_id={self.log_id}] Loaded {rows_loaded} rows to {self.stage_table_name}"
-                        )
-                        valid_records[:] = [None] * self.batch_size
-                        valid_index = 0
+                        try:
+                            rows_loaded = self._load_batch(valid_records[:valid_index])
+                            self.rows_written_to_stage += rows_loaded
+                            logger.debug(
+                                f"[log_id={self.log_id}] Loaded {rows_loaded} rows to {self.stage_table_name}"
+                            )
+                            valid_records[:] = [None] * self.batch_size
+                            valid_index = 0
+                        except Exception as e:
+                            logger.exception(
+                                f"Error loading batch into table: {self.stage_table_name}: {e}"
+                            )
+                            raise e
                 else:
                     if "id" not in record:
                         record["id"] = int(time.time_ns() // 1000) + len(
@@ -132,8 +138,14 @@ class BigQueryWriter(BaseWriter):
                 logger.debug(
                     f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
                 )
-                rows_loaded = self._load_batch(valid_records[:valid_index])
-                self.rows_written_to_stage += rows_loaded
+                try:
+                    rows_loaded = self._load_batch(valid_records[:valid_index])
+                    self.rows_written_to_stage += rows_loaded
+                except Exception as e:
+                    logger.exception(
+                        f"Error loading final batch into table: {self.stage_table_name}: {e}"
+                    )
+                    raise e
             if invalid_records:
                 with self.Session() as session:
                     try:
