@@ -1,8 +1,10 @@
+import io
 import logging
 from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union, get_args, get_origin
 
+import openpyxl
 import pendulum
 import pyexcel
 from pydantic_extra_types.pendulum_dt import Date, DateTime
@@ -80,20 +82,36 @@ class ExcelReader(BaseReader):
                 converted_record[key] = value
         return converted_record
 
-    def _get_file_stream(self, mode: str = "rb"):
-        # Not needed for Excel
-        pass
-
     def read(self) -> Iterator[list[Dict[str, Any]]]:
-        records = pyexcel.iget_records(
-            file_name=str(self.file_path),
-            sheet_name=self.sheet_name,
-            name_columns_by_row=0,
-        )
+        file_path_str = str(self.file_path)
+        workbook = None
+
+        if file_path_str.startswith(("s3://", "gs://", "azure://", "https://")):
+            with super()._get_file_stream("rb") as stream:
+                file_content = stream.read()
+            file_stream = io.BytesIO(file_content)
+            workbook = openpyxl.load_workbook(
+                file_stream, read_only=True, data_only=True
+            )
+            sheet = workbook[self.sheet_name]
+            header_row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True))
+            headers = [str(cell) if cell is not None else "" for cell in header_row]
+            records = (
+                dict(zip(headers, row))
+                for row in sheet.iter_rows(min_row=2, values_only=True)
+            )
+        else:
+            records = pyexcel.iget_records(
+                file_name=file_path_str,
+                sheet_name=self.sheet_name,
+                name_columns_by_row=0,
+            )
 
         try:
             first_record = next(records)
         except StopIteration:
+            if workbook:
+                workbook.close()
             logger.error(f"No data found in Excel file: {self.file_path}")
             raise NoDataInFileError(f"No data found in Excel file: {self.file_path}")
 
@@ -112,6 +130,8 @@ class ExcelReader(BaseReader):
         )
 
         if no_valid_headers or all_default_names:
+            if workbook:
+                workbook.close()
             logger.error(f"No header found in file: {self.source_filename}")
             raise MissingHeaderError(error_values={})
 
@@ -122,27 +142,33 @@ class ExcelReader(BaseReader):
         # Merge first record back into the iterator
         all_records = chain([first_record], records)
 
-        batch = [None] * self.batch_size
-        batch_index = 0
-        logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
-        for index, record in enumerate(all_records, start=1):
-            if index <= self.skip_rows:
-                continue
+        try:
+            batch = [None] * self.batch_size
+            batch_index = 0
+            logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
+            for index, record in enumerate(all_records, start=1):
+                if index <= self.skip_rows:
+                    continue
 
-            batch[batch_index] = self._convert_excel_dates(record, date_field_mapping)
-            batch_index += 1
-            self.rows_read += 1
-
-            if batch_index == self.batch_size:
-                logger.debug(
-                    f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                batch[batch_index] = self._convert_excel_dates(
+                    record, date_field_mapping
                 )
-                yield batch
-                batch[:] = [None] * self.batch_size
-                batch_index = 0
+                batch_index += 1
+                self.rows_read += 1
 
-        if batch_index > 0:
-            logger.debug(
-                f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
-            )
-            yield batch[:batch_index]
+                if batch_index == self.batch_size:
+                    logger.debug(
+                        f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
+                    )
+                    yield batch
+                    batch[:] = [None] * self.batch_size
+                    batch_index = 0
+
+            if batch_index > 0:
+                logger.debug(
+                    f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
+                )
+                yield batch[:batch_index]
+        finally:
+            if workbook:
+                workbook.close()

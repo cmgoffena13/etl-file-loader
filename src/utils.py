@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, Union
 
 from src.exception.base import BaseFileErrorEmailException
-from src.exception.exceptions import FileDeleteError
 
 logger = logging.getLogger(__name__)
 

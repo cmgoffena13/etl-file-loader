@@ -1,3 +1,2 @@
 Add in File Support for: Avro
-Add in Compression Support for: snappy
-Add in Database Support for: Snowflake
+Add in Database Support for: Snowflake, Redshift

@@ -260,7 +260,7 @@ class PipelineRunner:
                     f"{str(e)} at {error_location}",
                 )
         finally:
-            self.file_helper.delete_file(self.file_path)
+            # self.file_helper.delete_file(self.file_path)
             self._log_update(self.log)
         return self.result
 
