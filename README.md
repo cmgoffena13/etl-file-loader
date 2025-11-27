@@ -80,7 +80,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
 ### Reliability
  - Retries File & Database Operations to handle transient errors
  - Automatic File Grain Validation
-    - Ensure the File is ready for Database integration
+    - Ensures the File is ready for Database integration
  - Validate Row-Level Data Via Pydantic Models
     - Validation Errors get sent to Dead Letter Queue (default: any errors = failure)
  - Configurable Audit Queries
