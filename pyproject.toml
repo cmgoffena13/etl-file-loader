@@ -61,3 +61,10 @@ dev = [
     "ruff>=0.14.6",
     "scalene>=1.5.55",
 ]
+
+[tool.pytest.ini_options]
+testpaths = [ "src/tests" ]
+pythonpath = [ "." ]
+
+[tool.ruff]
+lint.select = ["I"]
