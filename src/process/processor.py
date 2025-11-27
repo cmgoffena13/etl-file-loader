@@ -147,9 +147,10 @@ class Processor:
                 details.append(f"\n\nNo Source Found:\n{no_source_details}")
 
             message = "\n\n".join(details)
+            alert_level = AlertLevel.ERROR if files_failed else AlertLevel.WARNING
             notifier = NotifierFactory.get_notifier("webhook")
             webhook_notifier = notifier(
-                level=AlertLevel.ERROR,
+                level=alert_level,
                 title="File Processing Summary",
                 message=message,
             )
