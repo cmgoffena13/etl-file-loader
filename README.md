@@ -82,7 +82,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
  - Automatic File Grain Validation
     - Ensures the File is ready for Database integration
  - Validate Row-Level Data Via Pydantic Models
-    - Validation Errors get sent to Dead Letter Queue (default: any errors = failure)
+    - Validation Errors get sent to Dead Letter Queue table (default: any errors = failure)
  - Configurable Audit Queries
     - Audit File Data Holistically
 ### Maintainability
