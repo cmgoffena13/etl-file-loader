@@ -62,7 +62,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
     - [SQL Server](#sql-server)
     - [BigQuery](#bigquery)
   - [SMTP Emailing](#smtp-emailing)
-  - [Slack Alerting](#slack-alerting)
+  - [Webhook Alerting](#webhook-alerting)
   - [Source Configuration](#source-configuration)
   - [Entrypoint](#entrypoint)
   - [Testing](#testing)
@@ -92,7 +92,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
     - Empower Business Stakeholders to Resolve Row Level Issues
  - Type-Safe Repo Configuration Settings
  - Comprehensive Test Suite
- - Automatic Slack Notifications for Internal Errors
+ - Automatic Webhook Notifications for Internal Errors
  - Factory Pattern allows for easy implementation for new support
  - Detailed Pipeline Logging Stored for Performance Tracking
 
