@@ -173,7 +173,7 @@ PROD_OPEN_TELEMETRY_AUTHORIZATION_TOKEN=asdfdsaf
 ```
 
 ### Target Database
-You will need to pick the database you want to ingest the files into; this is also the database that will store the Dead Letter Queue table: `file_load_dlq` and the pipeline logging table: `file_load_log`. FileLoader utilizes SQLAlchemy for all database connections. Current Support:
+You will need to pick the database you want to ingest the files into; this is also the database that will store the Dead Letter Queue table: `file_load_dlq` and the pipeline logging table: `file_load_log`. FileLoader utilizes SQLAlchemy for all database connections. Current support:
  - MySQL
  - Postgres
  - SQL Server
