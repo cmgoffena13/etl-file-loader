@@ -265,4 +265,4 @@ I tested a local, 350MB (uncompressed), 2 million row parquet file with indepth 
  - SQL Server (No SqlBulkCopy): ~2657 seconds 
    - SQL Server Python limitations forced batch size to be 160 records. Kill me now.
  - BigQuery: ~320 seconds 
-   - Probably faster with a bigger batch size. BigQuery handles big data better. Just have to respect memory constraints of FileLoader
+   - Probably faster with a bigger batch size. BigQuery handles big data better. Just have to respect memory constraints of FileLoader. I would also limit the Pipeline logging updates to `file_load_log` to just be at the start and end of the pipeline instead of each stage. BigQuery isn't designed to be an application database so limiting updates would improve performance.
