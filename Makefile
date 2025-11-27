@@ -10,6 +10,9 @@ test:
 upgrade:
 	uv sync --upgrade --all-extras
 
+install:
+	uv sync --frozen --compile-bytecode
+	
 down:
 	docker compose down
 
