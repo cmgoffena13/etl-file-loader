@@ -10,7 +10,7 @@ from sqlalchemy import Table
 from src.file_helper.base import BaseFileHelper
 from src.file_helper.factory import FileHelperFactory
 from src.notify.factory import NotifierFactory
-from src.notify.slack import AlertLevel
+from src.notify.webhook import AlertLevel
 from src.pipeline.runner import PipelineRunner
 from src.process.db import create_tables, setup_db
 from src.settings import config
@@ -147,13 +147,13 @@ class Processor:
                 details.append(f"\n\nNo Source Found:\n{no_source_details}")
 
             message = "\n\n".join(details)
-            notifier = NotifierFactory.get_notifier("slack")
-            slack_notifier = notifier(
+            notifier = NotifierFactory.get_notifier("webhook")
+            webhook_notifier = notifier(
                 level=AlertLevel.ERROR,
                 title="File Processing Summary",
                 message=message,
             )
-            slack_notifier.notify()
+            webhook_notifier.notify()
 
     def __del__(self):
         if hasattr(self, "thread_pool"):

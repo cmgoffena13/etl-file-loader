@@ -2,13 +2,13 @@ from typing import Type
 
 from src.notify.base import BaseNotifier
 from src.notify.email import EmailNotifier
-from src.notify.slack import SlackNotifier
+from src.notify.webhook import WebhookNotifier
 
 
 class NotifierFactory:
     _notifiers = {
         "email": EmailNotifier,
-        "slack": SlackNotifier,
+        "webhook": WebhookNotifier,
     }
 
     @classmethod

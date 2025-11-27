@@ -49,8 +49,8 @@ class GlobalConfig(BaseConfig):
     SMTP_PASSWORD: Optional[str] = None
     FROM_EMAIL: Optional[str] = None
     DATA_TEAM_EMAIL: Optional[str] = None  # Always CC'd on failure notifications
-    # Slack notification settings
-    SLACK_WEBHOOK_URL: Optional[str] = None
+    # Generic webhook notification settings (works with Slack, MS Teams, etc.)
+    WEBHOOK_URL: Optional[str] = None
 
     # AWS S3 settings
     AWS_ACCESS_KEY_ID: Optional[str] = None

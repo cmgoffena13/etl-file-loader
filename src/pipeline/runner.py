@@ -242,7 +242,7 @@ class PipelineRunner:
                         self.source_filename,
                         None,
                     )
-                # Failure since email notification was not sent, notifies through slack instead
+                # Failure since email notification was not sent, notifies through webhook instead
                 if self.result is None:
                     self.result = (
                         False,
