@@ -176,10 +176,10 @@ def test_email_notification_on_missing_header(
     assert mock_email_notify.called
 
 
-def test_slack_notification_on_processing_failures(
-    mock_slack_notify, create_csv_file, test_processor
+def test_webhook_notification_on_processing_failures(
+    mock_webhook_notify, create_csv_file, test_processor
 ):
-    """Test that Slack notification is sent when files fail processing."""
+    """Test that webhook notification is sent when files fail processing."""
     # Create files that will fail (using pattern that matches TEST_CSV_SOURCE without notifications)
     create_csv_file("sales_fail_1.csv", CSV_VALIDATION_ERROR)
     create_csv_file("sales_fail_2.csv", CSV_DUPLICATES)
@@ -194,17 +194,17 @@ def test_slack_notification_on_processing_failures(
     for success, _, _ in test_processor.results:
         assert success is False
 
-    # Call results_summary to trigger Slack notification
+    # Call results_summary to trigger webhook notification
     test_processor.results_summary()
 
-    # Verify Slack notification was called
-    assert mock_slack_notify.called
+    # Verify webhook notification was called
+    assert mock_webhook_notify.called
 
 
-def test_slack_notification_on_no_source_found(
-    mock_slack_notify, session_temp_dir, test_processor
+def test_webhook_notification_on_no_source_found(
+    mock_webhook_notify, session_temp_dir, test_processor
 ):
-    """Test that Slack notification is sent when files have no matching source."""
+    """Test that webhook notification is sent when files have no matching source."""
     # Create a file with no matching source
     unknown_file = session_temp_dir / "unknown_file.txt"
     unknown_file.write_text("test content")
@@ -213,32 +213,32 @@ def test_slack_notification_on_no_source_found(
     test_processor.results.clear()
     test_processor.process_file("unknown_file.txt")
 
-    # Call results_summary to trigger Slack notification
+    # Call results_summary to trigger webhook notification
     test_processor.results_summary()
 
-    # Verify Slack notification was called
-    assert mock_slack_notify.called
+    # Verify webhook notification was called
+    assert mock_webhook_notify.called
 
 
-def test_slack_notification_not_sent_on_success(mock_slack_notify, test_processor):
-    """Test that Slack notification is NOT sent when all files succeed."""
+def test_webhook_notification_not_sent_on_success(mock_webhook_notify, test_processor):
+    """Test that webhook notification is NOT sent when all files succeed."""
     # Process no files (empty results)
     test_processor.results.clear()
 
     # Call results_summary
     test_processor.results_summary()
 
-    # Verify Slack notification was NOT called
-    assert not mock_slack_notify.called
+    # Verify webhook notification was NOT called
+    assert not mock_webhook_notify.called
 
 
 def test_both_notifications_sent(
     mock_email_notify,
-    mock_slack_notify,
+    mock_webhook_notify,
     create_csv_file,
     test_processor,
 ):
-    """Test that both email and Slack notifications are sent when appropriate."""
+    """Test that both email and webhook notifications are sent when appropriate."""
     create_csv_file("notify_sales_integration.csv", CSV_VALIDATION_ERROR)
 
     # Process file (this will trigger email notification)
@@ -248,7 +248,7 @@ def test_both_notifications_sent(
     # Verify email notification was called
     assert mock_email_notify.called
 
-    # Note: Slack notification won't be triggered because email notification
+    # Note: Webhook notification won't be triggered because email notification
     # sets success=True, so there are no failures in results_summary.
     # To test both, we'd need a file that fails but doesn't have notification_emails
     # configured, or we need to process a file without notifications that fails.

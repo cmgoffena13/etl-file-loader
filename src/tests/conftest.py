@@ -186,7 +186,7 @@ def mock_email_notify():
 
 
 @pytest.fixture()
-def mock_slack_notify():
-    """Mock Slack notification function."""
-    with patch("src.notify.slack.SlackNotifier.notify") as mock:
+def mock_webhook_notify():
+    """Mock webhook notification function."""
+    with patch("src.notify.webhook.WebhookNotifier.notify") as mock:
         yield mock
