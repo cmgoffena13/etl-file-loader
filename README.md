@@ -16,6 +16,24 @@ FileLoader is a robust Data Engineering service that ingests files into a databa
     - Use your preferred communication platform
  - Dockerized Application to deploy anywhere
 
+## Why Files?
+Files are essential for non-technical roles at companies because they allow anyone to organize, analyze, and share data without requiring programming skills. Files are:
+ - Accessible
+ - Portable
+ - Structured
+ - Standardized
+ - Decoupled From Software Systems
+
+## Why Databases?
+Databases are essential for technical roles at companies because they allow for scalable, reliable, and maintainable data management. Databases are:
+ - Accessible
+ - Secure
+ - Structured
+ - Standardized
+ - Decoupled From Software Systems
+
+Ironic, yet the key difference is databases are far more reliable and scalable than files. The problem is they require technical skills to interact with, such as knowing SQL. The even bigger problem is bridging the gap between these two, when technical knowledge is limited and a company needs to move forward. Cue FileLoader.
+
 ## Table of Contents
 
 - [Features](#features)
