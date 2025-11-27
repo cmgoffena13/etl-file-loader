@@ -95,7 +95,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
  - Comprehensive Test Suite
  - Automatic Webhook Notifications for Internal Errors
  - Factory Pattern allows for easy implementation for new support
- - Detailed Pipeline Logging Stored for Performance Tracking
+ - Pipeline Run Information stored in logging table for performance tracking
 
 ## Design
 
