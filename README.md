@@ -2,10 +2,22 @@
 
 FileLoader is a robust Data Engineering service that ingests files into a database.
 
+ - Mutliple Ingestion File Formats Supported (CSV, Excel, JSON, Parquet)
+    - Supports Gzip Compression
+ - Multiple File Systems Supported (Local/Shared Drive, AWS S3, Azure Blob Container, GCP Bucket)
+    - Use your preferred File System
+ - Multiple Target Databases Supported (MySQL, Postgres, SQL Server, BigQuery)
+     - Use your preferred Database
+ - OpenTelemetry Logging
+    - Use your preferred logging platform
+ - SMTP Protocol for Email Alerts to Business Stakeholders
+    - Use your preferred SMTP service
+ - Slack Integration for Internal Alerts
+ - Dockerized Application to deploy anywhere
+
 ## Table of Contents
 
 - [Features](#features)
-  - [Flexibility](#flexibility)
   - [Scalability](#scalability)
   - [Reliability](#reliability)
   - [Maintainability](#maintainability)
@@ -38,18 +50,6 @@ FileLoader is a robust Data Engineering service that ingests files into a databa
 - [Contributing](#contributing)
 
 ## Features
-### Flexibility
- - Mutliple Ingestion File Formats Supported (CSV, Excel, JSON, Parquet)
-    - Supports Gzip Compression
- - Multiple File Systems Supported (Local/Shared Drive, AWS S3, Azure Blob Container, GCP Bucket)
-    - Use your preferred File System
- - Multiple Target Databases Supported (MySQL, Postgres, SQL Server, BigQuery)
-     - Use your preferred Database
- - OpenTelemetry Logging
-    - Use your preferred logging platform
- - SMTP Protocol for Email Alerts
-    - Use your preferred SMTP service
- - Dockerized Application to deploy anywhere
 ### Scalability
  - Configuration Driven Pipelines
  - Parallel Processing of Files
