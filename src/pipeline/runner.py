@@ -216,8 +216,9 @@ class PipelineRunner:
             self.log.ended_at = pendulum.now("UTC")
             self.log.success = True
             self.result = (True, self.source_filename, None)
+            duration = (self.log.ended_at - self.log.started_at).total_seconds()
             logger.info(
-                f"[log_id={self.log.id}] Pipeline completed successfully for file:  {self.source_filename}"
+                f"[log_id={self.log.id}] Pipeline completed successfully for file:  {self.source_filename} - took {duration:.2f} seconds"
             )
         except Exception as e:
             self.log.success = None if isinstance(e, DuplicateFileError) else False

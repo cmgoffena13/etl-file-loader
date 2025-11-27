@@ -67,6 +67,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
   - [Entrypoint](#entrypoint)
   - [Testing](#testing)
 - [Contributing](#contributing)
+- [Benchmarks](#benchmarks)
 
 ## Features
 ### Scalability
@@ -254,3 +255,14 @@ FileLoader also has a CLI. This is convenient when you may need to process one s
 
 ## Contributing
 See the [contributing](CONTRIBUTING.md) doc on detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
+
+## Benchmarks
+I tested a local, 350MB (uncompressed), 2 million row parquet file with indepth validation utilizing a 100k batch size. The original file was obtained [here](https://github.com/datablist/sample-csv-files) and you can check the validation with the source configuration at `src/sources/systems/customer/customer.py`. Below are the benchmarks for each database.
+ - Postgres: ~124 seconds
+ - MySQL: ~430 seconds 
+   - Problem with the publish, let me know what I'm doing wrong there in `src/pipeline/publish/mysql.py`. Could easily be as fast as Postgres probably. I'm not a MySQL guy.
+ - SQL Server (SqlBulkCopy): ~154 seconds
+ - SQL Server (No SqlBulkCopy): ~2657 seconds 
+   - SQL Server Python limitations forced batch size to be 160 records. Kill me now.
+ - BigQuery: ~320 seconds 
+   - Probably faster with a bigger batch size. BigQuery handles big data better. Just have to respect memory constraints of FileLoader

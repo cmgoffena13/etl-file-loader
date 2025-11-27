@@ -31,7 +31,7 @@ dev-mysql: reset
 dev-sqlserver: reset
 	docker compose up -d sqlserver sqlserver-init
 	sleep 5
-	ENV_STATE=dev DEV_DATABASE_URL='mssql+pyodbc://sa:FileLoader123!@localhost:1433/fileloader?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes' DEV_SQL_SERVER_SQLBULKCOPY_FLAG=true uv run python main.py
+	ENV_STATE=dev DEV_DATABASE_URL='mssql+pyodbc://sa:FileLoader123!@localhost:1433/fileloader?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes' DEV_SQL_SERVER_SQLBULKCOPY_FLAG=false uv run python main.py
 
 dev-sqlserver-bulk: reset
 	docker compose up -d sqlserver sqlserver-init
