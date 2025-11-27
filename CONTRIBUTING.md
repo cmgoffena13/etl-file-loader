@@ -4,6 +4,7 @@
 1. The repo uses `uv`. You'll want to install `uv` and then you can `uv sync` or utilize the `install` make command.
 2. You'll need to install the pre-commits, make sure that you have your environment active in the terminal by utilizing `source .venv/bin/activate`. Then issue the command:  
 `uv run -- pre-commit install --install-hooks`
+3. Setup any wanted configuration. For development work you need to prefix the environment variables from the `src/settings.py` file with `DEV_` in your `.env` file.
 
 ## Adding a New File Type
 
