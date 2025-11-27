@@ -56,6 +56,8 @@ FileLoader is a robust Data Engineering service that ingests files into a databa
  - Batch Processing for Memory Efficiency and Database Throttling
  - Dynamic Table Creation
  - Proper Table Indexing for Scalable Database Operations
+ - Automatic Dead Letter Queue Cleanup
+   - Upon Successful Reprocessing
 ### Reliability
  - Retries File & Database Operations to handle transient errors
  - Automatic File Grain Validation
