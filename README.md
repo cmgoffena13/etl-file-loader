@@ -215,7 +215,7 @@ PROD_DATABASE_URL=mssql+pyodbc://username:password@localhost:1433/database_name?
 ```
 
 #### BigQuery
-Example Variable  
+Example Variable:  
 `bigquery://project_id/dataset_name`
 
 ### SMTP Emailing
@@ -233,7 +233,7 @@ PROD_DATA_TEAM_EMAIL=DataTeam@hotmail.com
 ```
 
 ### Webhook Alerting
-FileLoader supports webhook alerting for internal errors that are not file issues. Webhook alerting contains system information. This separates responsibilities between software and business stakeholders/external partners. Example variable:
+FileLoader supports webhook alerting for internal errors that are not file issues. Webhook alerting contains system information. This separates responsibilities between software and business stakeholders/external partners. Example variable: 
 `PROD_WEBHOOK_URL=https://hooks.slack.com/services/asdf/hjkl/ajsljdfjksj`
 
 ### Source Configuration
