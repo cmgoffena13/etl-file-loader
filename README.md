@@ -12,7 +12,8 @@ FileLoader is a robust Data Engineering service that ingests files into a databa
     - Use your preferred logging platform
  - SMTP Protocol for Email Alerts to Business Stakeholders
     - Use your preferred SMTP service
- - Slack Integration for Internal Alerts
+ - Webhook Integration for Internal Alerts
+    - Use your preferred communication platform
  - Dockerized Application to deploy anywhere
 
 ## Table of Contents
@@ -199,7 +200,7 @@ Example Variable
 `bigquery://project_id/dataset_name`
 
 ### SMTP Emailing
-FileLoader utilizes SMTP to send email alerts for file issues if the `notification_emails` config is set for a source. Example variables:
+FileLoader utilizes SMTP to send email alerts for file issues if the `notification_emails` config is set for a source. Email alerts are file specific and provide relevant information to help business stakeholders address file problems. Example variables:
 ```
 # AWS SES Service
 PROD_SMTP_HOST=email-smtp.us-east-2.amazonaws.com
@@ -212,9 +213,9 @@ PROD_FROM_EMAIL=DataTeamSender@hotmail.com
 PROD_DATA_TEAM_EMAIL=DataTeam@hotmail.com
 ```
 
-### Slack Alerting
-FileLoader supports slack alerting for internal errors that are not file issues. This separates responsibilities between software and business stakeholders. Example variable:
-`PROD_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/asdf/hjkl/ajsljdfjksj`
+### Webhook Alerting
+FileLoader supports webhook alerting for internal errors that are not file issues. Webhook alerting contains system information. This separates responsibilities between software and business stakeholders/external partners. Example variable:
+`PROD_WEBHOOK_URL=https://hooks.slack.com/services/asdf/hjkl/ajsljdfjksj`
 
 ### Source Configuration
 To use the service, you need to create source configurations for each file you expect to be dropped in the directory_path. You can see examples in `src/sources/systems/`
@@ -234,4 +235,4 @@ FileLoader also has a CLI. This is convenient when you may need to process one s
 `./fileloader --help`
 
 ## Contributing
-See the [contributing](CONTRIBUTING.md) doc on detailed approaches to add to the repo in regards to development. This could be implementing more file formats, a different notifier besides slack, another database integration, etc.
+See the [contributing](CONTRIBUTING.md) doc on detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
