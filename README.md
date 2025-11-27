@@ -169,7 +169,7 @@ The FileLoader service uses OpenTelemetry for logs, you'll need to figure out th
 ```
 PROD_OPEN_TELEMETRY_LOG_ENDPOINT=https://logfire-us.pydantic.dev/v1/logs
 PROD_OPEN_TELEMETRY_TRACE_ENDPOINT=https://logfire-us.pydantic.dev/v1/traces
-DEV_OPEN_TELEMETRY_AUTHORIZATION_TOKEN=asdfdsaf
+PROD_OPEN_TELEMETRY_AUTHORIZATION_TOKEN=asdfdsaf
 ```
 
 ### Target Database
