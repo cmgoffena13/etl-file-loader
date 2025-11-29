@@ -10,6 +10,7 @@ import ijson
 
 from src.exception.exceptions import NoDataInFileError
 from src.pipeline.read.base import BaseReader
+from src.settings import config
 from src.sources.base import DataSource, JSONSource
 
 logger = logging.getLogger(__name__)
@@ -84,14 +85,18 @@ class JSONReader(BaseReader):
             try:
                 first_obj = next(objects)
             except StopIteration:
-                raise NoDataInFileError(error_values={})
+                raise NoDataInFileError(
+                    error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+                )
 
             # Validate fields using first object
             if isinstance(first_obj, list) and first_obj:
                 first_item = first_obj[0]
             elif isinstance(first_obj, list):
                 logger.error(f"No data found in JSON file: {self.file_path}")
-                raise NoDataInFileError(error_values={})
+                raise NoDataInFileError(
+                    error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+                )
             else:
                 first_item = first_obj
 

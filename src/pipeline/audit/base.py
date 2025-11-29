@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.exception.exceptions import AuditFailedError, GrainValidationError
 from src.pipeline.db_utils import db_create_duplicate_grain_examples_sql
 from src.pipeline.model_utils import get_field_alias
+from src.settings import config
 from src.sources.base import DataSource
 from src.utils import get_file_name, retry
 
@@ -74,6 +75,7 @@ class BaseAuditor(ABC):
                 "stage_table_name": self.stage_table_name,
                 "grain_aliases_formatted": ", ".join(grain_field_aliases.values()),
                 "additional_details": duplicate_examples_formatted,
+                "archive_directory": str(config.ARCHIVE_PATH),
             }
         )
 
@@ -124,5 +126,6 @@ class BaseAuditor(ABC):
                 error_values={
                     "stage_table_name": self.stage_table_name,
                     "failed_audits_formatted": failed_audits_formatted,
+                    "archive_directory": str(config.ARCHIVE_PATH),
                 }
             )

@@ -170,5 +170,6 @@ class Validator:
                         "records_validated": self.records_validated,
                         "validation_errors": self.validation_errors,
                         "additional_details": sample_errors_str,
+                        "archive_directory": str(config.ARCHIVE_PATH),
                     }
                 )

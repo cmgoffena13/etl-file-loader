@@ -6,6 +6,7 @@ import pyarrow.parquet as pq
 
 from src.exception.exceptions import MissingHeaderError, NoDataInFileError
 from src.pipeline.read.base import BaseReader
+from src.settings import config
 from src.sources.base import DataSource, ParquetSource
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,9 @@ class ParquetReader(BaseReader):
         """Read row groups from a ParquetFile object."""
         if parquet_file.metadata.num_rows == 0:
             logger.error(f"No data found in Parquet file: {self.source_filename}")
-            raise NoDataInFileError(error_values={})
+            raise NoDataInFileError(
+                error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+            )
 
         schema = parquet_file.schema_arrow
         actual_fields = set(schema.names)
@@ -43,7 +46,9 @@ class ParquetReader(BaseReader):
             logger.error(
                 f"No column names found in Parquet file schema: {self.source_filename}"
             )
-            raise MissingHeaderError(error_values={})
+            raise MissingHeaderError(
+                error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+            )
 
         self._validate_fields(actual_fields)
 

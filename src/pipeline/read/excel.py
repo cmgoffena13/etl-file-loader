@@ -11,6 +11,7 @@ from pydantic_extra_types.pendulum_dt import Date, DateTime
 
 from src.exception.exceptions import MissingHeaderError, NoDataInFileError
 from src.pipeline.read.base import BaseReader
+from src.settings import config
 from src.sources.base import DataSource, ExcelSource
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,9 @@ class ExcelReader(BaseReader):
             if workbook:
                 workbook.close()
             logger.error(f"No data found in Excel file: {self.file_path}")
-            raise NoDataInFileError(f"No data found in Excel file: {self.file_path}")
+            raise NoDataInFileError(
+                error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+            )
 
         actual_headers = set(first_record.keys())
 
@@ -133,7 +136,9 @@ class ExcelReader(BaseReader):
             if workbook:
                 workbook.close()
             logger.error(f"No header found in file: {self.source_filename}")
-            raise MissingHeaderError(error_values={})
+            raise MissingHeaderError(
+                error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+            )
 
         self._validate_fields(actual_headers)
 

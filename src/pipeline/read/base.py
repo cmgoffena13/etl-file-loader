@@ -58,6 +58,7 @@ class BaseReader(ABC):
                     "missing_fields_display_formatted": ", ".join(
                         missing_fields_display
                     ),
+                    "archive_directory": str(config.ARCHIVE_PATH),
                 }
             )
 

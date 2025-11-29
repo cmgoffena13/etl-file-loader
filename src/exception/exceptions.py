@@ -13,7 +13,9 @@ class DuplicateFileError(BaseFileErrorEmailException):
             "The file {source_filename} has already been processed and has been moved to the duplicates directory.\n\n"
             "To reprocess this file:\n"
             "1. Existing records need to be removed from the target table where source_filename = '{source_filename}'\n"
-            "2. Move the file from the duplicates directory back to the processing directory"
+            "2. Move the file from the duplicates directory back to the processing directory\n\n"
+            "Failed file can be found in the duplicates directory: {duplicate_directory}\n"
+            "File location: {duplicate_directory}/{source_filename}"
         )
 
 
@@ -26,7 +28,9 @@ class GrainValidationError(BaseFileErrorEmailException):
         return (
             "Grain values are not unique for file: {source_filename}\n"
             "Table: {stage_table_name}\n"
-            "Grain columns (file column names): {grain_aliases_formatted}"
+            "Grain columns (file column names): {grain_aliases_formatted}\n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
         )
 
 
@@ -39,7 +43,9 @@ class AuditFailedError(BaseFileErrorEmailException):
         return (
             "Audit checks failed for file: {source_filename}\n"
             "Table: {stage_table_name}\n"
-            "Failed audits: \n{failed_audits_formatted}"
+            "Failed audits: \n{failed_audits_formatted}\n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
         )
 
 
@@ -49,7 +55,11 @@ class NoDataInFileError(BaseFileErrorEmailException):
 
     @property
     def email_message(self) -> str:
-        return "No data found in file: {source_filename}"
+        return (
+            "No data found in file: {source_filename}\n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
+        )
 
 
 class MissingHeaderError(BaseFileErrorEmailException):
@@ -58,7 +68,11 @@ class MissingHeaderError(BaseFileErrorEmailException):
 
     @property
     def email_message(self) -> str:
-        return "No header found in file: {source_filename}"
+        return (
+            "No header found in file: {source_filename}\n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
+        )
 
 
 class MissingColumnsError(BaseFileErrorEmailException):
@@ -70,7 +84,9 @@ class MissingColumnsError(BaseFileErrorEmailException):
         return (
             "Missing required fields in file: {source_filename}\n"
             "Required fields: {required_fields_display_formatted}\n"
-            "Missing fields: {missing_fields_display_formatted}"
+            "Missing fields: {missing_fields_display_formatted}\n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
         )
 
 
@@ -83,7 +99,9 @@ class ValidationThresholdExceededError(BaseFileErrorEmailException):
         return (
             "Validation error rate ({truncated_error_rate}) exceeds threshold ({threshold}) for file: {source_filename} \n"
             "Total Records Processed: {records_validated} \n"
-            "Failed Records: {validation_errors} "
+            "Failed Records: {validation_errors} \n\n"
+            "Failed file can be found in the archive directory: {archive_directory}\n"
+            "File location: {archive_directory}/{source_filename}"
         )
 
 

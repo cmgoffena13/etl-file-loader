@@ -31,6 +31,7 @@ from src.pipeline.validate.validator import Validator
 from src.pipeline.write.base import BaseWriter
 from src.pipeline.write.factory import WriterFactory
 from src.process.log import FileLoadLog
+from src.settings import config
 from src.sources.base import DataSource
 from src.utils import get_error_location, get_file_name, retry
 
@@ -128,7 +129,11 @@ class PipelineRunner:
             self.file_helper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
             self._log_update(self.log)
-            raise DuplicateFileError(error_values={})
+            raise DuplicateFileError(
+                error_values={
+                    "duplicate_directory": str(config.DUPLICATE_FILES_PATH),
+                }
+            )
 
         self.log.duplicate_skipped = False
         self._log_update(self.log)
@@ -261,7 +266,7 @@ class PipelineRunner:
                     f"{str(e)} at {error_location}",
                 )
         finally:
-            # self.file_helper.delete_file(self.file_path)
+            self.file_helper.delete_file(self.file_path)
             self._log_update(self.log)
         return self.result
 

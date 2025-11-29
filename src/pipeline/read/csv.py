@@ -8,6 +8,7 @@ from typing import Any, Dict, Iterator, Union
 
 from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
+from src.settings import config
 from src.sources.base import CSVSource, DataSource
 
 logger = logging.getLogger(__name__)
@@ -47,13 +48,17 @@ class CSVReader(BaseReader):
 
             if not reader.fieldnames:
                 logger.error(f"No header found in file: {self.source_filename}")
-                raise MissingHeaderError(error_values={})
+                raise MissingHeaderError(
+                    error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+                )
 
             if not any(
                 fieldname and fieldname.strip() for fieldname in reader.fieldnames
             ):
                 logger.error(f"No header found in file: {self.source_filename}")
-                raise MissingHeaderError(error_values={})
+                raise MissingHeaderError(
+                    error_values={"archive_directory": str(config.ARCHIVE_PATH)}
+                )
 
             self._validate_fields(set(reader.fieldnames))
 
