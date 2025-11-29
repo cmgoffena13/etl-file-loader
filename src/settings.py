@@ -4,9 +4,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Union
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pythonnet import load
+
+from src.utils import aws_secret_helper, azure_secret_helper, gcp_secret_helper
 
 logger = logging.getLogger(__name__)
 SUPPORTED_DATABASE_DRIVERS = {
@@ -20,6 +22,35 @@ SUPPORTED_DATABASE_DRIVERS = {
 
 class BaseConfig(BaseSettings):
     ENV_STATE: Optional[str] = None
+
+    @classmethod
+    def _get_secret_field_mapping(cls):
+        return {
+            "aws": [],
+            "azure": [],
+            "gcp": [],
+        }
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_secrets(cls, data: dict):
+        resolved = {}
+        secret_mapping = cls._get_secret_field_mapping()
+        for field_name, value in data.items():
+            if not value or not isinstance(value, str):
+                resolved[field_name] = value
+                continue
+
+            if field_name in secret_mapping.get("aws", []):
+                resolved[field_name] = aws_secret_helper(value)
+            elif field_name in secret_mapping.get("azure", []):
+                resolved[field_name] = azure_secret_helper(value)
+            elif field_name in secret_mapping.get("gcp", []):
+                resolved[field_name] = gcp_secret_helper(value)
+            else:
+                resolved[field_name] = value
+
+        return resolved
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -63,10 +94,18 @@ class GlobalConfig(BaseConfig):
     AZURE_STORAGE_ACCOUNT_URL: Optional[str] = None
     AZURE_STORAGE_ACCOUNT_KEY: Optional[str] = None
 
+    # Azure Key Vault settings (for secret manager access)
+    AZURE_CLIENT_ID: Optional[str] = None
+    AZURE_CLIENT_SECRET: Optional[str] = None
+    AZURE_TENANT_ID: Optional[str] = None
+    AZURE_KEY_VAULT_URL: Optional[str] = None
+
     # GCP Cloud Storage settings
     GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = (
         None  # Path to service account JSON file
     )
+    # For GCP Secret Manager access
+    GOOGLE_CLOUD_PROJECT: Optional[str] = None
 
     @field_validator(
         "DIRECTORY_PATH", "ARCHIVE_PATH", "DUPLICATE_FILES_PATH", mode="before"
@@ -93,7 +132,15 @@ class GlobalConfig(BaseConfig):
     @field_validator("FILE_HELPER_PLATFORM", mode="before")
     @classmethod
     def lowercase_file_helper_platform(cls, v):
-        return v.lower()
+        if v is None:
+            return "default"
+        v_lower = v.lower()
+        valid_platforms = {"default", "aws", "gcp", "azure"}
+        if v_lower not in valid_platforms:
+            raise ValueError(
+                f"FILE_HELPER_PLATFORM must be one of {valid_platforms}, got: {v}"
+            )
+        return v_lower
 
 
 class DevConfig(GlobalConfig):
@@ -130,8 +177,43 @@ def get_config(env_state: str):
     if not env_state:
         raise ValueError("ENV_STATE is not set. Possible values are: DEV, TEST, PROD")
     env_state = env_state.lower()
+
+    # Set up environment variables for secret manager authentication BEFORE creating config
+    # This is needed because resolve_secrets() runs during config initialization
+    prefix = env_state.upper() + "_"
+
+    aws_access_key_id = os.environ.get(f"{prefix}AWS_ACCESS_KEY_ID")
+    if aws_access_key_id:
+        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
+    aws_secret_access_key = os.environ.get(f"{prefix}AWS_SECRET_ACCESS_KEY")
+    if aws_secret_access_key:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
+    aws_session_token = os.environ.get(f"{prefix}AWS_SESSION_TOKEN")
+    if aws_session_token:
+        os.environ["AWS_SESSION_TOKEN"] = aws_session_token
+    aws_region = os.environ.get(f"{prefix}AWS_REGION")
+    if aws_region:
+        os.environ["AWS_REGION"] = aws_region
+    gcp_creds = os.environ.get(f"{prefix}GOOGLE_APPLICATION_CREDENTIALS")
+    if gcp_creds:
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_creds
+    azure_client_id = os.environ.get(f"{prefix}AZURE_CLIENT_ID")
+    if azure_client_id:
+        os.environ["AZURE_CLIENT_ID"] = azure_client_id
+    azure_client_secret = os.environ.get(f"{prefix}AZURE_CLIENT_SECRET")
+    if azure_client_secret:
+        os.environ["AZURE_CLIENT_SECRET"] = azure_client_secret
+    azure_tenant_id = os.environ.get(f"{prefix}AZURE_TENANT_ID")
+    if azure_tenant_id:
+        os.environ["AZURE_TENANT_ID"] = azure_tenant_id
+    azure_vault_url = os.environ.get(f"{prefix}AZURE_KEY_VAULT_URL")
+    if azure_vault_url:
+        os.environ["AZURE_KEY_VAULT_URL"] = azure_vault_url
+
     configs = {"dev": DevConfig, "prod": ProdConfig, "test": TestConfig}
-    return configs[env_state]()
+    config_instance = configs[env_state]()
+
+    return config_instance
 
 
 config = get_config(BaseConfig().ENV_STATE)
@@ -156,11 +238,6 @@ _initialize_dotnet_runtime()
 def get_database_config():
     env_state = BaseConfig().ENV_STATE
     db_config = get_config(env_state)
-
-    if config.DRIVERNAME == "bigquery":
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-            db_config.GOOGLE_APPLICATION_CREDENTIALS
-        )
 
     config_dict = {
         "sqlalchemy.url": db_config.DATABASE_URL,

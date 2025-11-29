@@ -42,10 +42,6 @@ class GCPFileHelper(BaseFileHelper):
     @classmethod
     def _get_storage_client(cls):
         if cls._storage_client is None:
-            if config.GOOGLE_APPLICATION_CREDENTIALS:
-                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-                    config.GOOGLE_APPLICATION_CREDENTIALS
-                )
             cls._storage_client = storage.Client()
 
         return cls._storage_client

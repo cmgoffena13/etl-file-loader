@@ -50,6 +50,10 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
   - [Auditor](#auditor)
   - [Publisher](#publisher)
 - [Production Setup](#production-setup)
+  - [Cloud Secret Manager](#cloud-secret-manager)
+    - [AWS Secret Manager Recommended Implementation](#aws-secret-manager-recommended-implementation)
+    - [Azure Secret Manager Recommended Implementation](#azure-secret-manager-recommended-implementation)
+    - [GCP Secret Manager Recommended Implementation](#gcp-secret-manager-recommended-implementation)
   - [File Helper Platform](#file-helper-platform)
     - [Local/Shared Drive](#localshared-drive)
     - [AWS S3](#aws-s3)
@@ -133,8 +137,78 @@ The Publisher class merges the staging table data into the target table (the fin
 
 ## Production Setup
 
-To assign all of the production environment variables, you'll need to declare the configuration environment:  
-`ENV_STATE=PROD`
+To assign all of the production environment variables, you'll need to declare the configuration environment, `ENV_STATE=PROD` and ensure our environment variables have a `PROD_` prefix.
+
+### Cloud Secret Manager
+
+It is best practice to utilize a secret manager to store sensitive information. For development, we can supply the correct environment variables for authentication (see `.env.example` file for examples) or utilize default authentication through a cli login.  
+
+For production, cloud IAM can be utilized to ensure secret manager access. Then we can simply declare the environment variables as the secret names. To ensure the secret names are grabbed and secrets populated, we have to modify `BaseConfig` class in the `src/settings.py` file.
+```
+    @classmethod
+    def _get_secret_field_mapping(cls):
+        return {
+            "aws": [],
+            "azure": [],
+            "gcp": [],
+        }
+```
+
+Here are my recommendations per platform. Set the sensitive environment variables as the secret names and make sure they are also filled out in the `BaseConfig` class. 
+
+#### AWS Secret Manager Recommended Implementation
+```
+    @classmethod
+    def _get_secret_field_mapping(cls):
+        return {
+            "aws": [
+                "DATABASE_URL",
+                "SMTP_HOST",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
+                "WEBHOOK_URL",
+            ],
+            "azure": [],
+            "gcp": [],
+        }
+```
+
+#### Azure Secret Manager Recommended Implementation
+```
+    @classmethod
+    def _get_secret_field_mapping(cls):
+        return {
+            "aws": [],
+            "azure": [
+                "DATABASE_URL",
+                "SMTP_HOST",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
+                "WEBHOOK_URL",
+                "AZURE_STORAGE_CONNECTION_STRING",
+            ],
+            "gcp": [],
+        }
+```
+
+#### GCP Secret Manager Recommended Implementation
+```
+    @classmethod
+    def _get_secret_field_mapping(cls):
+        return {
+            "aws": [],
+            "azure": [],
+            "gcp": [
+                "DATABASE_URL",
+                "SMTP_HOST",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
+                "WEBHOOK_URL",
+            ],
+        }
+```
+
+These values are grabbed when the config is loaded and the config is cached to prevent excess secret manager calls.
 
 ### File Helper Platform
 
