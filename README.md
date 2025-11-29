@@ -120,7 +120,7 @@ The PipelineRunner class is the data pipeline that the file passes through. It c
 Upon completion, the file is deleted out of the file drop directory and the stage table dropped to ensure a clean environment.
 
 ### Reader
-The Reader class checks if the file has a header, if data is available, and if the file contains all of the columns required (as designated in the configuration). If any of the checks fail, an email alert is triggered and the pipeline stops. The Reader streams data from the file and yields a batch of data to the Validator class once the batch limit is reached.
+The Reader class checks if the file has a header, if data is available, and if the file contains all of the columns required (as designated in the configuration). If any of the checks fail, an email alert is triggered and the pipeline stops. If the checks succeed, the Reader streams data from the file and yields a batch of data to the Validator class once the batch limit is reached.
 
 ### Validator
 The Validator class utilizes the source configuration to validate each record of the batch it receives against a pydantic model. If a record fails validation, it is flagged and enriched with information for the Dead Letter Queue (validation failure reason(s), file row number, column(s) that failed, etc.). The Validator yields a batch of data to the Writer class once the batch limit is reached.  
