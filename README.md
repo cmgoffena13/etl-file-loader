@@ -212,7 +212,7 @@ These values are grabbed when the config is loaded and the config is cached to p
 
 ### File Helper Platform
 
-First, you need to decide the locations for the File Directory, Archive Directory, and Duplicate File Directory. Current support:  
+You need to decide the locations for the File Directory, Archive Directory, and Duplicate File Directory. Current support:  
  - Local/Shared Drive
  - AWS S3
  - Azure Blob Container
