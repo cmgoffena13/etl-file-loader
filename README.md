@@ -141,9 +141,7 @@ To assign all of the production environment variables, you'll need to declare th
 
 ### Cloud Secret Manager
 
-It is best practice to utilize a secret manager to store sensitive information. For development, we can supply the correct environment variables for authentication (see `.env.example` file for examples) or utilize default authentication through a cli login.  
-
-For production, cloud IAM can be utilized to ensure secret manager access. Then we can simply declare the environment variables as the secret names. To ensure the secret names are grabbed and secrets populated, we have to modify `BaseConfig` class in the `src/settings.py` file.
+It is best practice to utilize a secret manager to store sensitive information. For production, cloud IAM can be utilized to ensure secret manager access. Then we can simply declare the environment variables as the secret names. To ensure the secret names are grabbed and secrets populated, we have to modify `BaseConfig` class in the `src/settings.py` file.
 ```
     @classmethod
     def _get_secret_field_mapping(cls):
@@ -236,8 +234,6 @@ PROD_DUPLICATE_FILES_PATH=src/tests/test_duplicate_files
 You have two options for authentication, AWS Session Token or Access ID/Secret Access pair. Example Variables:
 ```
 PROD_FILE_HELPER_PLATFORM=aws
-PROD_AWS_ACCESS_KEY_ID=A;SLDKJF;LKJASJDFA
-PROD_AWS_SECRET_ACCESS_KEY_ID=sdfasdfas
 PROD_DIRECTORY_PATH=s3://fileloader-test-asdf/test_directory/
 PROD_ARCHIVE_PATH=s3://fileloader-test-asdf/test_archive/
 PROD_DUPLICATE_FILES_PATH=s3://fileloader-test-asdf/test_duplicate_files/
@@ -257,7 +253,6 @@ PROD_DUPLICATE_FILES_PATH=https://adlsdevus.blob.core.windows.net/filedrop/test_
 Only option for authentication is google application credentials or handled in IAM. Example variables:
 ```
 PROD_FILE_HELPER_PLATFORM=gcp
-PROD_GOOGLE_APPLICATION_CREDENTIALS=name_of_file.json
 PROD_DIRECTORY_PATH=gs://fileloader-test/test_directory/
 PROD_ARCHIVE_PATH=gs://fileloader-test/test_archive/
 PROD_DUPLICATE_FILES_PATH=gs://fileloader-test/test_duplicate_files/
@@ -333,7 +328,7 @@ FileLoader also has a CLI. This is convenient when you may need to process one s
 `./fileloader --help`
 
 ## Contributing
-See the [contributing](CONTRIBUTING.md) doc on detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
+See the [contributing](CONTRIBUTING.md) doc on setting up for development and detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
 
 ## Benchmarks
 I tested a local, 350MB (uncompressed), 2 million row parquet file with indepth validation utilizing a 100k batch size. The original file was obtained [here](https://github.com/datablist/sample-csv-files) and you can check the validation with the source configuration at `src/sources/systems/customer/customer.py`. Below are the benchmarks for each database.

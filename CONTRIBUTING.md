@@ -4,7 +4,39 @@
 1. The repo uses `uv`. You'll want to install `uv` and then you can `uv sync` or utilize the `install` make command.
 2. You'll need to install the pre-commits, make sure that you have your environment active in the terminal by utilizing `source .venv/bin/activate`. Then issue the command:  
 `uv run -- pre-commit install --install-hooks`
-3. Setup any wanted configuration. For development work you need to prefix the environment variables from the `src/settings.py` file with `DEV_` in your `.env` file.
+3. Setup any wanted configuration. For development work you need to prefix the environment variables from the `src/settings.py` file with `DEV_` in your `.env` file. Reference `.env.example` for examples.
+
+## Cloud Development Environment
+
+To develop and test with cloud storage providers and secret managers, you'll need to set up authentication credentials. These are only needed for development - production environments use IAM roles, Managed Identity, or Application Default Credentials.
+
+### AWS
+
+**For AWS Secrets Manager and S3 access:**
+```
+DEV_AWS_ACCESS_KEY_ID=your-aws-access-key-id
+DEV_AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+DEV_AWS_SESSION_TOKEN=your-session-token  # Optional, for temporary credentials
+DEV_AWS_REGION=us-east-1
+```
+
+### Azure
+
+**For Azure Key Vault and Blob Storage access:**
+```
+DEV_AZURE_CLIENT_ID=your-azure-client-id
+DEV_AZURE_CLIENT_SECRET=your-azure-client-secret
+DEV_AZURE_TENANT_ID=your-azure-tenant-id
+DEV_AZURE_KEY_VAULT_URL=https://your-vault.vault.azure.net/
+```
+
+### GCP
+
+**For GCP Secret Manager and GCS access:**
+```
+DEV_GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+DEV_GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+```
 
 ## Adding a New File Type
 
