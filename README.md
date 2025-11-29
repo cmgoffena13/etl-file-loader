@@ -49,6 +49,7 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
   - [Writer](#writer)
   - [Auditor](#auditor)
   - [Publisher](#publisher)
+- [Development Setup](#development-setup)
 - [Production Setup](#production-setup)
   - [Cloud Secret Manager](#cloud-secret-manager)
     - [AWS Secret Manager Recommended Implementation](#aws-secret-manager-recommended-implementation)
@@ -135,9 +136,12 @@ The Auditor class checks if the entire file's data, stored in the staging table,
 ### Publisher
 The Publisher class merges the staging table data into the target table (the final destination). It handles inserts/updates appropriately to sync the target table with the new data provided in the staging table.
 
+## Development Setup
+See the [contributing](CONTRIBUTING.md) doc on setting up for development and detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
+
 ## Production Setup
 
-To assign all of the production environment variables, you'll need to declare the configuration environment, `ENV_STATE=PROD` and ensure our environment variables have a `PROD_` prefix.
+To assign all of the production environment variables, you'll need to declare the configuration environment, `ENV_STATE=PROD` and ensure the environment variables have a `PROD_` prefix.
 
 ### Cloud Secret Manager
 
@@ -231,7 +235,7 @@ PROD_DUPLICATE_FILES_PATH=src/tests/test_duplicate_files
 ```
 
 #### AWS S3
-You have two options for authentication, AWS Session Token or Access ID/Secret Access pair. Example Variables:
+You have two options for local authentication, AWS Session Token or Access ID/Secret Access pair. Example Variables:
 ```
 PROD_FILE_HELPER_PLATFORM=aws
 PROD_DIRECTORY_PATH=s3://fileloader-test-asdf/test_directory/
@@ -240,7 +244,7 @@ PROD_DUPLICATE_FILES_PATH=s3://fileloader-test-asdf/test_duplicate_files/
 ```
 
 #### Azure Blob Container
-You have two options for authentication, the azure storage connection string or the storage account url and key pair. Example Variables:
+You have two options for production authentication, the azure storage connection string or the storage account url and key pair. Example Variables:
 ```
 PROD_FILE_HELPER_PLATFORM=azure
 PROD_AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=adlsdevus;AccountKey=asdfasdf;EndpointSuffix=core.windows.net"
@@ -250,7 +254,7 @@ PROD_DUPLICATE_FILES_PATH=https://adlsdevus.blob.core.windows.net/filedrop/test_
 ```
 
 #### GCP Bucket
-Only option for authentication is google application credentials or handled in IAM. Example variables:
+Only option for local authentication is google application credentials. Example variables:
 ```
 PROD_FILE_HELPER_PLATFORM=gcp
 PROD_DIRECTORY_PATH=gs://fileloader-test/test_directory/
@@ -326,9 +330,6 @@ There are a couple ways to utilize FileLoader. The most basic way is to run `mai
 FileLoader also has a CLI. This is convenient when you may need to process one specific file OR if you have multiple file drop directories and you want to inject the paths. I created a `fileloader` bash script shortcut within the main repo directory. Simply utilize the below command within the repo to trigger CLI commands:  
 
 `./fileloader --help`
-
-## Contributing
-See the [contributing](CONTRIBUTING.md) doc on setting up for development and detailed approaches to add to the repo in regards to development. This could be implementing more file formats, another notifier, another database integration, etc.
 
 ## Benchmarks
 I tested a local, 350MB (uncompressed), 2 million row parquet file with indepth validation utilizing a 100k batch size. The original file was obtained [here](https://github.com/datablist/sample-csv-files) and you can check the validation with the source configuration at `src/sources/systems/customer/customer.py`. Below are the benchmarks for each database.
