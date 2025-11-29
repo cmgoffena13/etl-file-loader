@@ -133,6 +133,9 @@ The Publisher class merges the staging table data into the target table (the fin
 
 ## Production Setup
 
+To assign all of the production environment variables, you'll need to declare the configuration environment:  
+`ENV_STATE=PROD`
+
 ### File Helper Platform
 
 First, you need to decide the locations for the File Directory, Archive Directory, and Duplicate File Directory. Current support:  
