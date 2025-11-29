@@ -99,6 +99,8 @@ Ironic, yet the key difference is databases are far more reliable and scalable t
 
 ## Design
 
+The FileLoader Framework is designed to ensure file data is fit for analysis and consumption before ingesting the data into a database. It empowers business stakeholders to fix any file issues by creating an automatic feedback through email notifications upon failure. This feedback loop frees up Data Engineering time and holds the file owners responsible for the file structure and data quality.
+
 ![FileLoader Design](static/FileLoaderDesign.png)
 
 ### FileHelper
