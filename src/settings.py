@@ -180,35 +180,37 @@ def get_config(env_state: str):
 
     # Set up environment variables for secret manager authentication BEFORE creating config
     # This is needed because resolve_secrets() runs during config initialization
-    prefix = env_state.upper() + "_"
+    # Only set authentication credentials for DEV - PROD uses IAM/Managed Identity/ADC
+    if env_state == "dev":
+        prefix = env_state.upper() + "_"
 
-    aws_access_key_id = os.environ.get(f"{prefix}AWS_ACCESS_KEY_ID")
-    if aws_access_key_id:
-        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
-    aws_secret_access_key = os.environ.get(f"{prefix}AWS_SECRET_ACCESS_KEY")
-    if aws_secret_access_key:
-        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
-    aws_session_token = os.environ.get(f"{prefix}AWS_SESSION_TOKEN")
-    if aws_session_token:
-        os.environ["AWS_SESSION_TOKEN"] = aws_session_token
-    aws_region = os.environ.get(f"{prefix}AWS_REGION")
-    if aws_region:
-        os.environ["AWS_REGION"] = aws_region
-    gcp_creds = os.environ.get(f"{prefix}GOOGLE_APPLICATION_CREDENTIALS")
-    if gcp_creds:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_creds
-    azure_client_id = os.environ.get(f"{prefix}AZURE_CLIENT_ID")
-    if azure_client_id:
-        os.environ["AZURE_CLIENT_ID"] = azure_client_id
-    azure_client_secret = os.environ.get(f"{prefix}AZURE_CLIENT_SECRET")
-    if azure_client_secret:
-        os.environ["AZURE_CLIENT_SECRET"] = azure_client_secret
-    azure_tenant_id = os.environ.get(f"{prefix}AZURE_TENANT_ID")
-    if azure_tenant_id:
-        os.environ["AZURE_TENANT_ID"] = azure_tenant_id
-    azure_vault_url = os.environ.get(f"{prefix}AZURE_KEY_VAULT_URL")
-    if azure_vault_url:
-        os.environ["AZURE_KEY_VAULT_URL"] = azure_vault_url
+        aws_access_key_id = os.environ.get(f"{prefix}AWS_ACCESS_KEY_ID")
+        if aws_access_key_id:
+            os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
+        aws_secret_access_key = os.environ.get(f"{prefix}AWS_SECRET_ACCESS_KEY")
+        if aws_secret_access_key:
+            os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
+        aws_session_token = os.environ.get(f"{prefix}AWS_SESSION_TOKEN")
+        if aws_session_token:
+            os.environ["AWS_SESSION_TOKEN"] = aws_session_token
+        aws_region = os.environ.get(f"{prefix}AWS_REGION")
+        if aws_region:
+            os.environ["AWS_REGION"] = aws_region
+        gcp_creds = os.environ.get(f"{prefix}GOOGLE_APPLICATION_CREDENTIALS")
+        if gcp_creds:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_creds
+        azure_client_id = os.environ.get(f"{prefix}AZURE_CLIENT_ID")
+        if azure_client_id:
+            os.environ["AZURE_CLIENT_ID"] = azure_client_id
+        azure_client_secret = os.environ.get(f"{prefix}AZURE_CLIENT_SECRET")
+        if azure_client_secret:
+            os.environ["AZURE_CLIENT_SECRET"] = azure_client_secret
+        azure_tenant_id = os.environ.get(f"{prefix}AZURE_TENANT_ID")
+        if azure_tenant_id:
+            os.environ["AZURE_TENANT_ID"] = azure_tenant_id
+        azure_vault_url = os.environ.get(f"{prefix}AZURE_KEY_VAULT_URL")
+        if azure_vault_url:
+            os.environ["AZURE_KEY_VAULT_URL"] = azure_vault_url
 
     configs = {"dev": DevConfig, "prod": ProdConfig, "test": TestConfig}
     config_instance = configs[env_state]()
