@@ -309,6 +309,7 @@ dependencies = [
     { name = "slack-sdk" },
     { name = "sqlalchemy" },
     { name = "sqlalchemy-bigquery" },
+    { name = "structlog" },
     { name = "typer" },
     { name = "xxhash" },
 ]
@@ -367,6 +368,7 @@ requires-dist = [
     { name = "slack-sdk", specifier = ">=3.38.0" },
     { name = "sqlalchemy", specifier = ">=2.0.44" },
     { name = "sqlalchemy-bigquery", specifier = ">=1.16.0" },
+    { name = "structlog", specifier = ">=25.5.0" },
     { name = "typer", specifier = ">=0.20.0" },
     { name = "xxhash", specifier = ">=3.6.0" },
 ]
@@ -2757,6 +2759,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7e/6a/c49932b3d9c44cab9202b1866c5b36b7f0d0455d4653fbc0af4466aeaa76/sqlalchemy_bigquery-1.16.0.tar.gz", hash = "sha256:fe937a0d1f4cf7219fcf5d4995c6718805b38d4df43e29398dec5dc7b6d1987e", size = 119632, upload-time = "2025-11-06T01:35:40.373Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/87/11e6de00ef7949bb8ea06b55304a1a4911c329fdf0d9882b464db240c2c5/sqlalchemy_bigquery-1.16.0-py3-none-any.whl", hash = "sha256:0fe7634cd954f3e74f5e2db6d159f9e5ee87a47fbe8d52eac3cd3bb3dadb3a77", size = 40615, upload-time = "2025-11-06T01:35:39.358Z" },
+]
+
+[[package]]
+name = "structlog"
+version = "25.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/52/9ba0f43b686e7f3ddfeaa78ac3af750292662284b3661e91ad5494f21dbc/structlog-25.5.0.tar.gz", hash = "sha256:098522a3bebed9153d4570c6d0288abf80a031dfdb2048d59a49e9dc2190fc98", size = 1460830, upload-time = "2025-10-27T08:28:23.028Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/45/a132b9074aa18e799b891b91ad72133c98d8042c70f6240e4c5f9dabee2f/structlog-25.5.0-py3-none-any.whl", hash = "sha256:a8453e9b9e636ec59bd9e79bbd4a72f025981b3ba0f5837aebf48f02f37a7f9f", size = 72510, upload-time = "2025-10-27T08:28:21.535Z" },
 ]
 
 [[package]]

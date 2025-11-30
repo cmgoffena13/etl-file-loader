@@ -1,5 +1,6 @@
 from logging.config import dictConfig
 
+import structlog
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -34,6 +35,22 @@ class BigQuerySpanSampler(Sampler):
 
 
 def setup_logging():
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.stdlib.render_to_log_kwargs,
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
     # Setup OpenTelemetry tracing
     tracer_provider = TracerProvider(sampler=BigQuerySpanSampler())
     trace.set_tracer_provider(tracer_provider)

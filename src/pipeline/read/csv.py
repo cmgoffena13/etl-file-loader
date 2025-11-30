@@ -1,17 +1,18 @@
 import csv
-import gzip
 import io
 import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union
 
+import structlog
+
 from src.exception.exceptions import MissingHeaderError
 from src.pipeline.read.base import BaseReader
 from src.settings import config
 from src.sources.base import CSVSource, DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class CSVReader(BaseReader):

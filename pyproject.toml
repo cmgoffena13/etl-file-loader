@@ -48,6 +48,7 @@ dependencies = [
     "slack-sdk>=3.38.0",
     "sqlalchemy>=2.0.44",
     "sqlalchemy-bigquery>=1.16.0",
+    "structlog>=25.5.0",
     "typer>=0.20.0",
     "xxhash>=3.6.0",
 ]
