@@ -32,7 +32,7 @@ Databases are essential for technical roles at companies because they allow for 
  - Standardized
  - Decoupled From Software Systems
 
-Ironic, yet the key difference is databases are far more reliable and scalable than files. The problem is they require technical skills to interact with, such as knowing SQL. The even bigger problem is bridging the gap between these two, when technical knowledge is limited and a company needs to move forward. Cue FileLoader.
+Ironic, yet the key difference is databases are far more reliable and scalable than files. The problem is they require technical skills to interact with, such as knowing SQL. The even bigger problem is bridging the gap between these two, when technical knowledge is limited and a company needs to move forward. Queue FileLoader. Its a software joke, laugh.
 
 ## Table of Contents
 
