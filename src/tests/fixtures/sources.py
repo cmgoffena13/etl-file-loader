@@ -72,6 +72,24 @@ TEST_EXCEL_SOURCE = ExcelSource(
     """,
 )
 
+TEST_EXCEL_SOURCE_WITH_SHEET = ExcelSource(
+    file_pattern="multi_sheet_*.xlsx",
+    source_model=TestProduct,
+    table_name="products_sheet2",
+    grain=["sku"],
+    sheet_name="Sheet2",
+    skip_rows=0,
+    validation_error_threshold=0.0,
+    audit_query="""
+        SELECT 
+        CASE WHEN 
+            SUM(CASE WHEN Price > 0 THEN 1 ELSE 0 END) = COUNT(*) 
+            THEN 1 ELSE 0 
+        END AS unit_price_positive
+        FROM {table}
+    """,
+)
+
 
 class TestLedgerEntry(TableModel):
     entry_id: int

@@ -8,6 +8,7 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import openpyxl
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pyexcel
@@ -22,6 +23,7 @@ from src.tests.fixtures.sources import (
     TEST_CSV_SOURCE_WITH_NOTIFICATIONS,
     TEST_CSV_SOURCE_WITH_THRESHOLD,
     TEST_EXCEL_SOURCE,
+    TEST_EXCEL_SOURCE_WITH_SHEET,
     TEST_JSON_GZ_SOURCE,
     TEST_JSON_SOURCE,
     TEST_PARQUET_SOURCE,
@@ -49,6 +51,7 @@ def setup_test_db_and_directories(session_temp_dir):
         TEST_CSV_SOURCE_WITH_NOTIFICATIONS,
         TEST_CSV_SOURCE_WITH_THRESHOLD,
         TEST_EXCEL_SOURCE,
+        TEST_EXCEL_SOURCE_WITH_SHEET,
         TEST_JSON_SOURCE,
         TEST_JSON_GZ_SOURCE,
         TEST_PARQUET_SOURCE,
@@ -94,6 +97,33 @@ def create_excel_file(session_temp_dir):
         return file_name
 
     yield _create_excel_file
+
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@pytest.fixture()
+def create_multi_sheet_excel_file(session_temp_dir):
+    """Create Excel file with multiple sheets."""
+    file_paths = []
+
+    def _create_multi_sheet_excel_file(file_name: str, sheets: dict[str, list[list]]):
+        file_path = session_temp_dir / file_name
+        workbook = openpyxl.Workbook()
+        # Remove default sheet
+        workbook.remove(workbook.active)
+
+        for sheet_name, data in sheets.items():
+            sheet = workbook.create_sheet(title=sheet_name)
+            for row in data:
+                sheet.append(row)
+
+        workbook.save(file_path)
+        file_paths.append(file_path)
+        return file_name
+
+    yield _create_multi_sheet_excel_file
 
     for file_path in file_paths:
         if file_path.exists():

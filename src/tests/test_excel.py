@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from src.tests.fixtures.excel_files import (
     EXCEL_BLANK_HEADER,
@@ -7,6 +7,8 @@ from src.tests.fixtures.excel_files import (
     EXCEL_FAIL_AUDIT,
     EXCEL_MISSING_COLUMNS,
     EXCEL_NO_DATA,
+    EXCEL_SHEET1_DATA,
+    EXCEL_SHEET2_DATA,
     EXCEL_VALIDATION_ERROR,
 )
 
@@ -166,3 +168,38 @@ def test_excel_with_no_data(create_excel_file, test_processor):
     assert success is False
     assert "inventory_no_data.xlsx" in filename
     assert error == "NoDataInFileError"
+
+
+def test_excel_with_specific_sheet_name(create_multi_sheet_excel_file, test_processor):
+    """Test that Excel files with a specific sheet_name read from the correct tab."""
+    # Create Excel file with multiple sheets
+    create_multi_sheet_excel_file(
+        "multi_sheet_test.xlsx",
+        {"Sheet1": EXCEL_SHEET1_DATA, "Sheet2": EXCEL_SHEET2_DATA},
+    )
+
+    test_processor.results.clear()
+
+    # Process the file - should read from Sheet2 (as specified in TEST_EXCEL_SOURCE_WITH_SHEET)
+    test_processor.process_file("multi_sheet_test.xlsx")
+
+    # Check that processing succeeded
+    assert len(test_processor.results) == 1
+    success, filename, error = test_processor.results[0]
+    assert success is True
+    assert "multi_sheet_test.xlsx" in filename
+    assert error is None
+
+    # Verify that the correct sheet data was read (Sheet2 data, not Sheet1)
+    with test_processor.engine.connect() as conn:
+        result = conn.execute(text("SELECT sku FROM products_sheet2")).fetchall()
+
+        # Should have 2 records from Sheet2
+        assert len(result) == 2
+
+        # Verify the SKUs are from Sheet2 (SKU003 and SKU004), not Sheet1 (SKU001 and SKU002)
+        skus = [row[0] for row in result]
+        assert "SKU003" in skus
+        assert "SKU004" in skus
+        assert "SKU001" not in skus
+        assert "SKU002" not in skus
