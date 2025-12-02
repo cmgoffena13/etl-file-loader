@@ -198,6 +198,10 @@ def get_config(env_state: str):
             os.environ["AWS_REGION"] = aws_region
         gcp_creds = os.environ.get(f"{prefix}GOOGLE_APPLICATION_CREDENTIALS")
         if gcp_creds:
+            if not os.path.isabs(gcp_creds):
+                project_root = Path(__file__).parent.parent
+                gcp_creds = str(project_root / gcp_creds)
+            gcp_creds = str(Path(gcp_creds).resolve())
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_creds
         azure_client_id = os.environ.get(f"{prefix}AZURE_CLIENT_ID")
         if azure_client_id:
@@ -241,13 +245,27 @@ def get_database_config():
     env_state = BaseConfig().ENV_STATE
     db_config = get_config(env_state)
 
+    # Ensure GOOGLE_APPLICATION_CREDENTIALS is set for BigQuery before create_engine
+    # This is a safety check in case get_config was called before env vars were set
+    if db_config.DRIVERNAME == "bigquery" and db_config.GOOGLE_APPLICATION_CREDENTIALS:
+        if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+            credentials_path = str(db_config.GOOGLE_APPLICATION_CREDENTIALS)
+            if not os.path.isabs(credentials_path):
+                project_root = Path(__file__).parent.parent
+                credentials_path = str(project_root / credentials_path)
+            credentials_path = str(Path(credentials_path).resolve())
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+            logger.debug(
+                f"Set GOOGLE_APPLICATION_CREDENTIALS in get_database_config to: {credentials_path}"
+            )
+
     config_dict = {
         "sqlalchemy.url": db_config.DATABASE_URL,
         "sqlalchemy.echo": False,
         "sqlalchemy.future": True,
     }
 
-    if config.DRIVERNAME == "sqlite":
+    if db_config.DRIVERNAME == "sqlite":
         config_dict["sqlalchemy.connect_args"] = {"check_same_thread": False}
         config_dict["sqlalchemy.pool_size"] = 1
     else:
