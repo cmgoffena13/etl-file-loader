@@ -85,13 +85,13 @@ class BasePublisher(ABC):
         with self.Session() as session:
             try:
                 logger.info(
-                    f"[log_id={self.log_id}] Publishing {self.stage_table_name} to {self.target_table_name}"
+                    f"Publishing {self.stage_table_name} to {self.target_table_name}"
                 )
                 session.execute(self.create_publish_sql(now_iso))
                 session.commit()
             except Exception as e:
                 logger.exception(
-                    f"[log_id={self.log_id}] Failed to publish {self.stage_table_name} to {self.target_table_name}: {e}"
+                    f"Failed to publish {self.stage_table_name} to {self.target_table_name}: {e}"
                 )
                 session.rollback()
                 raise e

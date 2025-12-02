@@ -76,15 +76,12 @@ class BigQueryWriter(BaseWriter):
     def write(self, batches: Iterator[tuple[bool, list[Dict[str, Any]]]]) -> None:
         """Override to use BigQuery bulk loading via load_table_from_json."""
         logger.info(
-            f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name} using bulk load"
+            f"Writing data to stage table: {self.stage_table_name} using bulk load"
         )
 
         valid_records = [None] * self.batch_size
         valid_index = 0
         invalid_records = []
-        logger.info(
-            f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name} using bulk load"
-        )
         for batch in batches:
             for passed, record in batch:
                 record = self._convert_record(record)
@@ -97,7 +94,7 @@ class BigQueryWriter(BaseWriter):
                             rows_loaded = self._load_batch(valid_records[:valid_index])
                             self.rows_written_to_stage += rows_loaded
                             logger.debug(
-                                f"[log_id={self.log_id}] Loaded {rows_loaded} rows to {self.stage_table_name}"
+                                f"Loaded {rows_loaded} rows to {self.stage_table_name}"
                             )
                             valid_records[:] = [None] * self.batch_size
                             valid_index = 0
@@ -131,12 +128,10 @@ class BigQueryWriter(BaseWriter):
                 self.rows_written_to_stage % 100000 == 0
                 or self.rows_written_to_stage < 100000
             ) and self.rows_written_to_stage > 0:
-                logger.info(
-                    f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
-                )
+                logger.info(f"Rows written: {self.rows_written_to_stage}")
             if valid_index > 0:
                 logger.debug(
-                    f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
+                    f"Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
                 )
                 try:
                     rows_loaded = self._load_batch(valid_records[:valid_index])
@@ -150,7 +145,7 @@ class BigQueryWriter(BaseWriter):
                 with self.Session() as session:
                     try:
                         logger.debug(
-                            f"[log_id={self.log_id}] Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table.name}"
+                            f"Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table.name}"
                         )
                         stmt = insert(self.file_load_dlq_table).values(invalid_records)
                         session.execute(stmt)

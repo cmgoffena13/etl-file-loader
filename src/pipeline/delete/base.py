@@ -60,19 +60,17 @@ class BaseDeleter(ABC):
                     total_deleted += result.rowcount
 
                 logger.info(
-                    f"[log_id={self.log_id}] Deleted total of {total_deleted} DLQ record(s) for file: {self.source_filename}"
+                    f"Deleted total of {total_deleted} DLQ record(s) for file: {self.source_filename}"
                 )
             except Exception as e:
                 session.rollback()
                 logger.exception(
-                    f"[log_id={self.log_id}] Failed to delete DLQ records for file: {self.source_filename}: {e}"
+                    f"Failed to delete DLQ records for file: {self.source_filename}: {e}"
                 )
                 raise
 
     def delete(self):
         existing_dlq = self._check_if_dlq_records_exist()
         if existing_dlq:
-            logger.info(
-                f"[log_id={self.log_id}] Deleting DLQ records for file: {self.source_filename}"
-            )
+            logger.info(f"Deleting DLQ records for file: {self.source_filename}")
             self._batch_delete_dlq_records()

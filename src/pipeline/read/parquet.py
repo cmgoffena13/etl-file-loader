@@ -54,7 +54,7 @@ class ParquetReader(BaseReader):
 
         batch = [None] * self.batch_size
         batch_index = 0
-        logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
+        logger.info(f"Reading file: {self.source_filename}")
         for record_batch in parquet_file.iter_batches(batch_size=self.batch_size):
             for i in range(record_batch.num_rows):
                 row_dict = {
@@ -66,17 +66,13 @@ class ParquetReader(BaseReader):
                 self.rows_read += 1
 
                 if batch_index == self.batch_size:
-                    logger.debug(
-                        f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
-                    )
+                    logger.debug(f"Reading batch of {self.batch_size} rows")
                     yield batch
                     batch[:] = [None] * self.batch_size
                     batch_index = 0
 
         if batch_index > 0:
-            logger.debug(
-                f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
-            )
+            logger.debug(f"Reading final batch of {batch_index} rows")
             yield batch[:batch_index]
 
     def read(self) -> Iterator[list[Dict[str, Any]]]:

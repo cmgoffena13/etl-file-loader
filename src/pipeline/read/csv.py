@@ -64,7 +64,7 @@ class CSVReader(BaseReader):
 
             batch = [None] * self.batch_size
             batch_index = 0
-            logger.info(f"[log_id={self.log_id}] Reading file: {self.source_filename}")
+            logger.info(f"Reading file: {self.source_filename}")
             for index, row in enumerate(reader):
                 if index < self.skip_rows:
                     continue
@@ -74,15 +74,11 @@ class CSVReader(BaseReader):
                 self.rows_read += 1
 
                 if batch_index == self.batch_size:
-                    logger.debug(
-                        f"[log_id={self.log_id}] Reading batch of {self.batch_size} rows"
-                    )
+                    logger.debug(f"Reading batch of {self.batch_size} rows")
                     yield batch
                     batch[:] = [None] * self.batch_size
                     batch_index = 0
 
             if batch_index > 0:
-                logger.debug(
-                    f"[log_id={self.log_id}] Reading final batch of {batch_index} rows"
-                )
+                logger.debug(f"Reading final batch of {batch_index} rows")
                 yield batch[:batch_index]

@@ -71,7 +71,7 @@ class PipelineRunner:
             self.log.started_at,
         )
         bind_contextvars(log_id=self.log.id, source_filename=self.source_filename)
-        logger.info(f"[log_id={self.log.id}] Processing file: {self.source_filename}")
+        logger.info(f"Processing file: {self.source_filename}")
         self.file_helper: BaseFileHelper = file_helper
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id
@@ -126,9 +126,7 @@ class PipelineRunner:
 
     def check_if_processed(self) -> None:
         if db_check_if_duplicate_file(self.Session, self.source, self.source_filename):
-            logger.warning(
-                f"[log_id={self.log.id}] File {self.source_filename} has already been processed"
-            )
+            logger.warning(f"File {self.source_filename} has already been processed")
             self.file_helper.copy_file_to_duplicate_files(self.file_path)
             self.log.duplicate_skipped = True
             self._log_update(self.log)
@@ -226,7 +224,7 @@ class PipelineRunner:
             self.result = (True, self.source_filename, None)
             duration = (self.log.ended_at - self.log.started_at).total_seconds()
             logger.info(
-                f"[log_id={self.log.id}] Pipeline completed successfully for file:  {self.source_filename} - took {duration:.2f} seconds"
+                f"Pipeline completed successfully for file:  {self.source_filename} - took {duration:.2f} seconds"
             )
         except Exception as e:
             self.log.success = None if isinstance(e, DuplicateFileError) else False

@@ -220,7 +220,7 @@ def db_create_stage_table(
     stage_table = Table(stage_table_name, metadata, *columns)
     metadata.drop_all(engine, tables=[stage_table])
     metadata.create_all(engine, tables=[stage_table])
-    logger.info(f"[log_id={log_id}] Created stage table: {stage_table_name}")
+    logger.info(f"Created stage table: {stage_table_name}")
     return stage_table_name
 
 
@@ -233,11 +233,9 @@ def db_drop_stage_table(
             drop_sql = text(f"DROP TABLE IF EXISTS {stage_table_name}")
             session.execute(drop_sql)
             session.commit()
-            logger.info(f"[log_id={log_id}] Dropped stage table: {stage_table_name}")
+            logger.info(f"Dropped stage table: {stage_table_name}")
         except Exception as e:
-            logger.exception(
-                f"[log_id={log_id}] Error dropping stage table: {stage_table_name}: {e}"
-            )
+            logger.exception(f"Error dropping stage table: {stage_table_name}: {e}")
             session.rollback()
             raise e
 

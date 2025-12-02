@@ -46,9 +46,7 @@ class BaseWriter(ABC):
         valid_records = [None] * self.batch_size
         valid_index = 0
         invalid_records = []
-        logger.info(
-            f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name}"
-        )
+        logger.info(f"Writing data to stage table: {self.stage_table_name}")
         for batch in batches:
             for passed, record in batch:
                 record = self._convert_record(record)
@@ -59,7 +57,7 @@ class BaseWriter(ABC):
                         with self.Session() as session:
                             try:
                                 logger.debug(
-                                    f"[log_id={self.log_id}] Writing batch of {len(valid_records)} rows to stage table: {self.stage_table_name}"
+                                    f"Writing batch of {len(valid_records)} rows to stage table: {self.stage_table_name}"
                                 )
                                 session.execute(sql_insert_template, valid_records)
                                 session.commit()
@@ -95,14 +93,12 @@ class BaseWriter(ABC):
                 self.rows_written_to_stage % 100000 == 0
                 or self.rows_written_to_stage < 100000
             ) and self.rows_written_to_stage > 0:
-                logger.info(
-                    f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
-                )
+                logger.info(f"Rows written: {self.rows_written_to_stage}")
             if valid_index > 0:
                 with self.Session() as session:
                     try:
                         logger.debug(
-                            f"[log_id={self.log_id}] Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
+                            f"Writing final batch of {valid_index} rows to stage table: {self.stage_table_name}"
                         )
                         session.execute(
                             sql_insert_template, valid_records[:valid_index]
@@ -119,7 +115,7 @@ class BaseWriter(ABC):
                 with self.Session() as session:
                     try:
                         logger.debug(
-                            f"[log_id={self.log_id}] Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table.name}"
+                            f"Writing final batch of {len(invalid_records)} rows to dlq table: {self.file_load_dlq_table.name}"
                         )
                         stmt = insert(self.file_load_dlq_table).values(invalid_records)
                         session.execute(stmt)

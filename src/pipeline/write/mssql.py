@@ -257,9 +257,7 @@ class SQLServerWriter(BaseWriter):
         invalid_column_order = None
         try:
             conn.Open()
-            logger.info(
-                f"[log_id={self.log_id}] Writing data to stage table: {self.stage_table_name}"
-            )
+            logger.info(f"Writing data to stage table: {self.stage_table_name}")
             for batch in batches:
                 for passed, record in batch:
                     if passed:
@@ -282,7 +280,7 @@ class SQLServerWriter(BaseWriter):
                                 valid_column_order,
                             )
                             logger.debug(
-                                f"[log_id={self.log_id}] Writing batch of {valid_index} rows to stage table: {self.stage_table_name}"
+                                f"Writing batch of {valid_index} rows to stage table: {self.stage_table_name}"
                             )
                             valid_batch[:] = [None] * self.batch_size
                             valid_bulk_copy.WriteToServer(valid_dt)
@@ -309,7 +307,7 @@ class SQLServerWriter(BaseWriter):
                                 invalid_column_order,
                             )
                             logger.debug(
-                                f"[log_id={self.log_id}] Writing batch of {invalid_count} rows to dlq table: {self.file_load_dlq_table_name}"
+                                f"Writing batch of {invalid_count} rows to dlq table: {self.file_load_dlq_table_name}"
                             )
                             invalid_batch.clear()
                             invalid_bulk_copy.WriteToServer(invalid_dt)
@@ -320,9 +318,7 @@ class SQLServerWriter(BaseWriter):
                     self.rows_written_to_stage % 100000 == 0
                     or self.rows_written_to_stage < 100000
                 ) and self.rows_written_to_stage > 0:
-                    logger.info(
-                        f"[log_id={self.log_id}] Rows written: {self.rows_written_to_stage}"
-                    )
+                    logger.info(f"Rows written: {self.rows_written_to_stage}")
 
             # Write final batches
             if valid_batch:
@@ -331,7 +327,7 @@ class SQLServerWriter(BaseWriter):
                     valid_batch, valid_dt, dotnet_types, valid_column_order
                 )
                 logger.debug(
-                    f"[log_id={self.log_id}] Writing final batch of {len(valid_batch)} rows to stage table: {self.stage_table_name}"
+                    f"Writing final batch of {len(valid_batch)} rows to stage table: {self.stage_table_name}"
                 )
                 valid_bulk_copy.WriteToServer(valid_dt)
                 self.rows_written_to_stage += len(valid_batch)
@@ -340,7 +336,7 @@ class SQLServerWriter(BaseWriter):
                     invalid_batch, invalid_dt, dotnet_types, invalid_column_order
                 )
                 logger.debug(
-                    f"[log_id={self.log_id}] Writing final batch of {len(invalid_batch)} rows to dlq table: {self.file_load_dlq_table_name}"
+                    f"Writing final batch of {len(invalid_batch)} rows to dlq table: {self.file_load_dlq_table_name}"
                 )
                 invalid_bulk_copy.WriteToServer(invalid_dt)
                 self.rows_written_to_stage += len(invalid_batch)
@@ -348,7 +344,7 @@ class SQLServerWriter(BaseWriter):
             raise
         except Exception as e:
             logger.exception(
-                f"[log_id={self.log_id}] Failed to SqlBulkCopy insert into: {self.stage_table_name}: {e}"
+                f"Failed to SqlBulkCopy insert into: {self.stage_table_name}: {e}"
             )
             raise
         finally:
@@ -357,9 +353,7 @@ class SQLServerWriter(BaseWriter):
                     conn.Close()
                 conn.Dispose()
             except Exception as cleanup_error:
-                logger.warning(
-                    f"[log_id={self.log_id}] Error during connection cleanup: {cleanup_error}"
-                )
+                logger.warning(f"Error during connection cleanup: {cleanup_error}")
 
     def write(
         self,

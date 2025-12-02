@@ -98,9 +98,7 @@ class Validator:
         self, batches: Iterator[list[Dict[str, Any]]]
     ) -> Iterator[list[tuple[bool, Dict[str, Any]]]]:
         total_records = 0
-        logger.info(
-            f"[log_id={self.log_id}] Validating data from file: {self.source_filename}"
-        )
+        logger.info(f"Validating data from file: {self.source_filename}")
         for batch in batches:
             batch_results = [None] * self.batch_size
             batch_index = 0
@@ -141,16 +139,12 @@ class Validator:
                 batch_index += 1
                 self.records_validated += 1
                 if batch_index == self.batch_size:
-                    logger.debug(
-                        f"[log_id={self.log_id}] Validated batch of {self.batch_size} rows"
-                    )
+                    logger.debug(f"Validated batch of {self.batch_size} rows")
                     yield batch_results
                     batch_results[:] = [None] * self.batch_size
                     batch_index = 0
             if batch_index > 0:
-                logger.debug(
-                    f"[log_id={self.log_id}] Validated final batch of {batch_index} rows"
-                )
+                logger.debug(f"Validated final batch of {batch_index} rows")
                 yield batch_results[:batch_index]
         if self.records_validated > 0 and self.validation_errors > 0:
             error_rate = self.validation_errors / self.records_validated
@@ -161,7 +155,7 @@ class Validator:
                     for err in self.sample_validation_errors
                 )
                 logger.error(
-                    f"[log_id={self.log_id}] Validation threshold exceeded: {truncated_error_rate} > {self.source.validation_error_threshold}"
+                    f"Validation threshold exceeded: {truncated_error_rate} > {self.source.validation_error_threshold}"
                 )
                 raise ValidationThresholdExceededError(
                     error_values={

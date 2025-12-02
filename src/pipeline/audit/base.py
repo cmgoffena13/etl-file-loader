@@ -67,9 +67,7 @@ class BaseAuditor(ABC):
         duplicate_examples_formatted = self._format_duplicate_examples(
             duplicate_examples
         )
-        logger.error(
-            f"[log_id={self.log_id}] Grain validation failed for table: {self.stage_table_name}"
-        )
+        logger.error(f"Grain validation failed for table: {self.stage_table_name}")
         raise GrainValidationError(
             error_values={
                 "stage_table_name": self.stage_table_name,
@@ -85,9 +83,7 @@ class BaseAuditor(ABC):
 
     @retry()
     def audit_grain(self):
-        logger.info(
-            f"[log_id={self.log_id}] Auditing grain for table: {self.stage_table_name}"
-        )
+        logger.info(f"Auditing grain for table: {self.stage_table_name}")
         grain_sql = self.create_grain_validation_sql()
         grain_sql = grain_sql.format(table=self.stage_table_name)
         with self.Session() as session:
@@ -99,15 +95,11 @@ class BaseAuditor(ABC):
     @retry()
     def audit_data(self):
         if self.audit_query is None:
-            logger.warning(
-                f"[log_id={self.log_id}] No audit query found for source: {self.source.table_name}"
-            )
+            logger.warning(f"No audit query found for source: {self.source.table_name}")
             return
 
         with self.Session() as session:
-            logger.info(
-                f"[log_id={self.log_id}] Auditing data for table: {self.stage_table_name}"
-            )
+            logger.info(f"Auditing data for table: {self.stage_table_name}")
             audit_sql = text(
                 self.audit_query.format(table=self.stage_table_name).strip()
             )
@@ -119,9 +111,7 @@ class BaseAuditor(ABC):
                 self.failed_audits.append(audit_name)
         if self.failed_audits:
             failed_audits_formatted = ", ".join(self.failed_audits)
-            logger.error(
-                f"[log_id={self.log_id}] Audit failed for table {self.stage_table_name}"
-            )
+            logger.error(f"Audit failed for table {self.stage_table_name}")
             raise AuditFailedError(
                 error_values={
                     "stage_table_name": self.stage_table_name,
