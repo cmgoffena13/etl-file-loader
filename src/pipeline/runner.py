@@ -5,6 +5,7 @@ import pendulum
 import structlog
 from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
+from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from src.exception.base import BaseFileErrorEmailException
 from src.exception.exceptions import (
@@ -49,6 +50,7 @@ class PipelineRunner:
         file_load_dlq_table: Table,
         file_helper: BaseFileHelper,
     ):
+        clear_contextvars()
         self.source: DataSource = source
         self.file_path: Union[Path, str] = file_path
         self.source_filename: str = get_file_name(file_path)
@@ -68,7 +70,8 @@ class PipelineRunner:
             self.log.source_filename,
             self.log.started_at,
         )
-        logger.info(f"[log_id={self.log.id}] Processing file: {self.source_filename}")
+        bind_contextvars(log_id=self.log.id, source_filename=self.source_filename)
+        logger.info(f"Processing file: {self.source_filename}")
         self.file_helper: BaseFileHelper = file_helper
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id
