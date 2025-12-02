@@ -1,6 +1,5 @@
 import csv
 import io
-import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union

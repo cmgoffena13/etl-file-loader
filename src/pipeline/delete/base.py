@@ -1,14 +1,13 @@
-import logging
 from abc import ABC, abstractmethod
 
+import structlog
 from sqlalchemy import Engine, Table, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.settings import config
-from src.sources.base import DataSource
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class BaseDeleter(ABC):

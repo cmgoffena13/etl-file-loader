@@ -1,7 +1,7 @@
-import logging
 from pathlib import Path
 from typing import Optional, Union
 
+import structlog
 from pydantic import BaseModel, Field
 
 from src.exception.exceptions import MultipleSourcesMatchError
@@ -9,7 +9,7 @@ from src.pipeline.read.factory import ReaderFactory
 from src.sources.base import DataSource
 from src.utils import get_file_extension, get_file_name
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class SourceRegistry(BaseModel):

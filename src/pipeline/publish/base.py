@@ -1,14 +1,14 @@
-import logging
 from abc import ABC, abstractmethod
 
 import pendulum
+import structlog
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.pipeline.db_utils import db_get_column_names
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class BasePublisher(ABC):

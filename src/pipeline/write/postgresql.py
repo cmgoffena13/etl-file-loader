@@ -1,11 +1,10 @@
-import logging
-
+import structlog
 from sqlalchemy import Engine, Table
 
 from src.pipeline.write.base import BaseWriter
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class PostgreSQLWriter(BaseWriter):

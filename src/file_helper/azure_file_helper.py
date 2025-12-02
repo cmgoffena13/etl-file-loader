@@ -1,4 +1,3 @@
-import logging
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
@@ -7,6 +6,7 @@ from urllib.parse import urlparse
 
 import adlfs
 import pendulum
+import structlog
 from azure.core.credentials import AzureNamedKeyCredential
 from azure.core.exceptions import ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
@@ -23,7 +23,7 @@ from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class AzureFileHelper(BaseFileHelper):

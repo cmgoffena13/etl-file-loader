@@ -1,16 +1,16 @@
-import logging
 import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Union
 
+import structlog
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pythonnet import load
 
 from src.utils import aws_secret_helper, azure_secret_helper, gcp_secret_helper
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 SUPPORTED_DATABASE_DRIVERS = {
     "postgresql": "postgresql",
     "mysql": "mysql",

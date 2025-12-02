@@ -1,5 +1,4 @@
 import io
-import logging
 from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union, get_args, get_origin
@@ -7,6 +6,7 @@ from typing import Any, Dict, Iterator, Union, get_args, get_origin
 import openpyxl
 import pendulum
 import pyexcel
+import structlog
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 
 from src.exception.exceptions import MissingHeaderError, NoDataInFileError
@@ -14,7 +14,7 @@ from src.pipeline.read.base import BaseReader
 from src.settings import config
 from src.sources.base import DataSource, ExcelSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class ExcelReader(BaseReader):

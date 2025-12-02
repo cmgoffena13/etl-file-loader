@@ -1,8 +1,8 @@
-import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Union
 
 import pendulum
+import structlog
 from sqlalchemy import Engine, MetaData, Table, update
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -35,7 +35,7 @@ from src.settings import config
 from src.sources.base import DataSource
 from src.utils import get_error_location, get_file_name, retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class PipelineRunner:

@@ -1,19 +1,17 @@
-import gzip
-import logging
-from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union
 
 import ijson
+import structlog
 
 from src.exception.exceptions import NoDataInFileError
 from src.pipeline.read.base import BaseReader
 from src.settings import config
 from src.sources.base import DataSource, JSONSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class JSONReader(BaseReader):

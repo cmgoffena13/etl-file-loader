@@ -1,8 +1,8 @@
-import logging
 import threading
 import time
 from typing import Optional
 
+import structlog
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
@@ -54,7 +54,7 @@ def process(
 
     setup_logging()
 
-    root_logger = logging.getLogger("src")
+    root_logger = structlog.get_logger("src")
     for handler in root_logger.handlers:
         if isinstance(handler, RichHandler):
             handler.console = console

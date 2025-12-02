@@ -1,15 +1,15 @@
-import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union
 
 import pyarrow.parquet as pq
+import structlog
 
 from src.exception.exceptions import MissingHeaderError, NoDataInFileError
 from src.pipeline.read.base import BaseReader
 from src.settings import config
 from src.sources.base import DataSource, ParquetSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class ParquetReader(BaseReader):

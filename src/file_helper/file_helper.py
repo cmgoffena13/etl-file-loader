@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 from contextlib import contextmanager
@@ -6,6 +5,7 @@ from pathlib import Path
 from queue import Queue
 
 import pendulum
+import structlog
 
 from src.exception.exceptions import (
     DirectoryNotFoundError,
@@ -16,7 +16,7 @@ from src.exception.exceptions import (
 from src.file_helper.base import BaseFileHelper
 from src.settings import config
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class FileHelper(BaseFileHelper):

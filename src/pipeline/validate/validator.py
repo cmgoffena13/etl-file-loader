@@ -1,8 +1,8 @@
-import logging
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Union
 
 import pendulum
+import structlog
 from pydantic import TypeAdapter, ValidationError
 
 from src.exception.exceptions import ValidationThresholdExceededError
@@ -19,7 +19,7 @@ from src.settings import config
 from src.sources.base import DataSource
 from src.utils import get_file_name
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class Validator:

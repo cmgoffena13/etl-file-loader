@@ -1,9 +1,10 @@
 import gzip
-import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union
+
+import structlog
 
 from src.exception.exceptions import MissingColumnsError
 from src.file_helper.base import BaseFileHelper
@@ -12,7 +13,7 @@ from src.settings import config
 from src.sources.base import DataSource
 from src.utils import get_file_name
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class BaseReader(ABC):

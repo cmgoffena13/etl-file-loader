@@ -1,8 +1,8 @@
-import logging
 from sqlite3 import register_adapter
 
 import pendulum
 import pymysql.converters
+import structlog
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 from sqlalchemy import (
     JSON,
@@ -29,7 +29,7 @@ from src.pipeline.db_utils import (
 from src.settings import DevConfig, config, get_database_config
 from src.sources.master import MASTER_REGISTRY
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 def _register_pendulum_adapters():

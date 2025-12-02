@@ -1,11 +1,11 @@
 import json
-import logging
 import re
 import time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, Union, get_args, get_origin
 
+import structlog
 import xxhash
 from annotated_types import MaxLen
 from pydantic import EmailStr
@@ -37,7 +37,7 @@ from src.settings import config
 from src.sources.base import DataSource
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 def sanitize_table_name(filename: str) -> str:

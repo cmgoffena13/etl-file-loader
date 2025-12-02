@@ -1,4 +1,3 @@
-import logging
 import platform
 import socket
 import sys
@@ -6,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator
 from urllib.parse import parse_qs, unquote, urlparse
 
+import structlog
 from sqlalchemy import Engine, Table
 
 from src.exception.base import BaseFileErrorEmailException
@@ -13,7 +13,7 @@ from src.pipeline.write.base import BaseWriter
 from src.settings import config
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class SQLServerWriter(BaseWriter):

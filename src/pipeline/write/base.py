@@ -1,9 +1,7 @@
-import logging
-import time
 from abc import ABC
-from decimal import Decimal
 from typing import Any, Dict, Iterator
 
+import structlog
 from sqlalchemy import Engine, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -11,7 +9,7 @@ from src.pipeline.db_utils import db_get_column_names
 from src.settings import config
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class BaseWriter(ABC):

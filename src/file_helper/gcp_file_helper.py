@@ -1,4 +1,3 @@
-import logging
 import os
 from contextlib import contextmanager
 from pathlib import Path
@@ -8,6 +7,7 @@ from urllib.parse import urlparse
 
 import gcsfs
 import pendulum
+import structlog
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
 
@@ -22,7 +22,7 @@ from src.file_helper.gcp_wrapper import GcsfsFileWrapper
 from src.settings import config
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class GCPFileHelper(BaseFileHelper):

@@ -1,12 +1,11 @@
-import logging
-
 import pendulum
+import structlog
 from sqlalchemy import Engine, text
 
 from src.pipeline.publish.base import BasePublisher
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class PostgreSQLPublisher(BasePublisher):

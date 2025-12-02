@@ -1,4 +1,3 @@
-import logging
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
@@ -8,6 +7,7 @@ from urllib.parse import urlparse
 import boto3
 import pendulum
 import s3fs
+import structlog
 from botocore.exceptions import ClientError
 
 from src.exception.exceptions import (
@@ -21,7 +21,7 @@ from src.file_helper.base import BaseFileHelper
 from src.settings import config
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class AWSFileHelper(BaseFileHelper):

@@ -1,9 +1,9 @@
-import logging
 from concurrent.futures import ThreadPoolExecutor
 from queue import Empty, Queue
 from typing import Optional
 
 import psutil
+import structlog
 from opentelemetry import trace
 from sqlalchemy import Table
 
@@ -16,7 +16,7 @@ from src.process.db import create_tables, setup_db
 from src.settings import config
 from src.sources.master import MASTER_REGISTRY
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 

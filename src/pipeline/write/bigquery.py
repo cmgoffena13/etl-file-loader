@@ -1,11 +1,11 @@
 import base64
-import logging
 import time
 from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any, Dict
 from urllib.parse import urlparse
 
+import structlog
 from google.cloud import bigquery
 from pydantic_extra_types.pendulum_dt import Date, DateTime
 from sqlalchemy import Engine, Table, insert
@@ -14,7 +14,7 @@ from src.pipeline.write.base import BaseWriter
 from src.settings import config
 from src.sources.base import DataSource
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class BigQueryWriter(BaseWriter):

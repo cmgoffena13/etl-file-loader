@@ -1,11 +1,11 @@
-import logging
 import os
 import time
-from functools import lru_cache, wraps
+from functools import wraps
 from pathlib import Path
 from typing import Optional, Union
 
 import boto3
+import structlog
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from botocore.exceptions import ClientError
@@ -13,7 +13,7 @@ from google.cloud import secretmanager
 
 from src.exception.base import BaseFileErrorEmailException
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 def retry(attempts: int = 3, delay: float = 0.25, backoff: float = 2.0):

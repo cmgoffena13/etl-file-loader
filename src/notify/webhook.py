@@ -1,15 +1,15 @@
-import logging
 from enum import Enum
 from typing import Any, Dict, Optional
 
 import httpx
 import pendulum
+import structlog
 
 from src.notify.base import BaseNotifier
 from src.settings import config
 from src.utils import retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.getLogger(__name__)
 
 
 class AlertLevel(Enum):

@@ -1,8 +1,9 @@
-import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
-logger = logging.getLogger(__name__)
+import structlog
+
+logger = structlog.getLogger(__name__)
 
 
 class GcsfsFileWrapper:
