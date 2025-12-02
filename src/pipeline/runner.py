@@ -71,7 +71,7 @@ class PipelineRunner:
             self.log.started_at,
         )
         bind_contextvars(log_id=self.log.id, source_filename=self.source_filename)
-        logger.info(f"Processing file: {self.source_filename}")
+        logger.info(f"[log_id={self.log.id}] Processing file: {self.source_filename}")
         self.file_helper: BaseFileHelper = file_helper
         self.stage_table_name: str = db_create_stage_table(
             self.engine, self.metadata, self.source, self.source_filename, self.log.id
