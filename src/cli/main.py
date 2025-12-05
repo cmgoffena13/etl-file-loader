@@ -112,7 +112,6 @@ def process(
 
             thread = threading.Thread(target=process_files, daemon=True)
             thread.start()
-
             while (
                 not processing_done.is_set()
                 or len(processor.results) < initial_results_count + total_files

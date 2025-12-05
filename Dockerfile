@@ -1,30 +1,32 @@
-FROM python:3.12-slim-bookworm as build
+ARG UV_VERSION=0.9.15
+ARG PYTHON_VERSION=3.12
 
-ENV PYTHONBUFFERED=1 UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1
+FROM ghcr.io/astral-sh/uv:${UV_VERSION}-python${PYTHON_VERSION}-bookworm-slim AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && apt-get upgrade -y openssl
+ENV PYTHONUNBUFFERED=1 UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1 UV_PYTHON_CACHE_DIR=/root/.cache/uv/python
 
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-
-ENV PATH="/root/.local/bin:$PATH"
-WORKDIR /fileloader
+WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-install-project --no-dev
 
-COPY . .
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv/python \
+    uv sync --frozen --no-dev --no-install-project
 
-RUN groupadd -r fileloader && useradd --no-log-init -r -g fileloader fileloader && \
-    chown -R fileloader:fileloader /fileloader /root/.cache/uv
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv/python \
+    uv sync --frozen --no-dev
 
-FROM python:3.12-slim-bookworm as runtime
-WORKDIR /fileloader
-COPY --from=build /fileloader /fileloader
-ENV PATH="/root/.local/bin:$PATH"
+FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 
-RUN chown -R fileloader:fileloader /fileloader
+RUN groupadd -r appgroup && \
+    useradd -r -g appgroup fileloader
+
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY --from=builder --chown=fileloader:appgroup /app /app
+
 USER fileloader
 
-CMD ["uv", "run", "--", "python", "main.py"]
+CMD ["python", "-m", "main"]
