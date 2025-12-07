@@ -11,7 +11,7 @@ upgrade:
 	uv sync --upgrade --all-extras
 
 install:
-	uv sync --frozen --compile-bytecode --group dev
+	uv sync --frozen --compile-bytecode --all-extras
 	
 down:
 	docker compose down

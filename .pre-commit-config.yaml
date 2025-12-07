@@ -35,3 +35,4 @@ repos:
         types: [python]
         pass_filenames: false
         stages: [pre-push]
+        files: ^src/.*\.py$
